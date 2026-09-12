@@ -214,8 +214,8 @@
                 </div>
             </div>
             <div class="flex items-center gap-1">
-                <button onclick="Actions.printReport()" class="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition-colors" title="보고서 출력 / PDF 저장" aria-label="보고서 출력">
-                    🖨️
+                <button onclick="Actions.shareReport()" class="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition-colors" title="오늘 요약 공유하기 (카카오톡 등)" aria-label="오늘 요약 공유">
+                    📤
                 </button>
                 <button onclick="Actions.openSearchModal()" class="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition-colors" aria-label="통합 검색">
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M21 21l-6-6m2-5a7 7 0 11-14 0 7 7 0 0114 0z"></path></svg>
@@ -249,30 +249,15 @@
             
             <!-- [TAB 1] Timeline / Schedule -->
             <section id="tab-timeline" class="space-y-3.5 fade-in">
-                <!-- 2026-09-12 추가: "오늘의 안전상태" 4칸 요약 + 자주 쓰는 업무 4개 바로가기.
-                     새 화면·새 데이터 집계를 만들지 않고, 이미 있는 getUrgentItems()/
-                     RepeatDetectionEngine 결과를 요약해서 화면 맨 위에서 5~10초 안에 파악할 수
-                     있게 보여주고, 아래 "오늘 반드시 처리해야 할 업무" 패널·반복위험요인 화면으로
-                     바로 연결합니다(사용자 요청 — 메인 화면에서 오늘 할 일을 바로 알 수 있게). -->
-                <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs space-y-2">
-                    <h3 class="text-xs font-bold text-slate-800">📍 오늘의 안전상태</h3>
-                    <div id="today-status-grid" class="grid grid-cols-4 gap-1.5 text-center"></div>
-                </div>
-
-                <div class="grid grid-cols-4 gap-2">
-                    <button onclick="Actions.switchTab('reports')" class="flex flex-col items-center gap-1 py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors active:scale-95">
-                        <span class="text-base leading-none">🚨</span><span class="text-[9px] font-bold text-rose-700">위험발견</span>
-                    </button>
-                    <button onclick="Actions.scrollToTaskList()" class="flex flex-col items-center gap-1 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-colors active:scale-95">
-                        <span class="text-base leading-none">📋</span><span class="text-[9px] font-bold text-amber-700">오늘점검</span>
-                    </button>
-                    <button onclick="SafetyModule.goToSubtab('tbm')" class="flex flex-col items-center gap-1 py-2.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition-colors active:scale-95">
-                        <span class="text-base leading-none">🗣️</span><span class="text-[9px] font-bold text-sky-700">TBM</span>
-                    </button>
-                    <button onclick="SafetyModule.goToSubtab('capa')" class="flex flex-col items-center gap-1 py-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors active:scale-95">
-                        <span class="text-base leading-none">✅</span><span class="text-[9px] font-bold text-emerald-700">CAPA</span>
-                    </button>
-                </div>
+                <!-- v5.29: 이전 "오늘의 안전상태" 4칸 요약은 클릭해도 눈에 보이는 반응이 없고
+                     바로 아래 "오늘 반드시 처리해야 할 업무" 패널과 내용이 중복된다는 피드백에
+                     따라 제거했습니다. 바로가기 4개(위험발견/오늘점검/TBM/CAPA)도 위험발견은
+                     하단 탭에 이미 있고 오늘점검은 이 화면 자체라 중복이라, 실제 안전모듈
+                     우선순위(State.safetyMenuOrder — "✏️ 순서 편집"으로 사용자가 직접 정할 수
+                     있는 그 순서와 동일)에서 상위 5개를 그대로 가져오는 방식으로 바꿨습니다.
+                     이러면 순서가 항상 실제 우선순위와 일치하고, 사용자가 메뉴 순서를 바꾸면
+                     여기도 자동으로 같이 바뀝니다. -->
+                <div id="quick-actions-grid" class="grid grid-cols-5 gap-1.5"></div>
 
                 <!-- 2026-08-30(출시단계 업그레이드): 날씨 경보. 체감온도 33도 이상/풍속 10m/s
                      이상일 때만 나타나고, 평소엔 숨겨져 있습니다. 화면 맨 위(긴급업무 패널보다도
@@ -428,7 +413,10 @@
                             <button onclick="Actions.setReportFilter('완료')" id="filter-report-완료" class="px-2 py-0.5 rounded text-slate-600 hover:bg-slate-200">완료</button>
                         </div>
                     </div>
-                    <button onclick="Actions.exportReportsExcel()" title="검색·필터된 목록을 공식 서식 엑셀로 저장 (현장사진 포함)" class="w-full text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력</button>
+                    <div class="flex gap-1.5">
+                        <button onclick="Actions.exportReportsExcel()" title="검색·필터된 목록을 공식 서식 엑셀로 저장 (현장사진 포함)" class="flex-1 text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력</button>
+                        <button onclick="Actions.exportReportsExcel('share')" title="공유하기 (카카오톡 등)" class="text-xs px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors">📤</button>
+                    </div>
                     <input type="text" id="report-search" oninput="Actions.renderReports()" placeholder="🔍 제목 / 내용 검색..." class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-slate-800 transition-colors shadow-xs">
                     <div id="report-list" class="space-y-2"></div>
                 </div>
@@ -441,7 +429,6 @@
                         <span class="text-xs text-amber-400 font-bold flex items-center gap-1.5">
                             🛡️ 산업안전 보건관리 스마트 플랫폼
                         </span>
-                        <span class="text-[10px] bg-emerald-500/20 text-emerald-300 border border-emerald-500/30 font-mono px-2 py-0.5 rounded-full font-bold">11대 안전실무 통합</span>
                     </div>
 
                     <div class="flex items-center gap-1.5 pt-1 pb-1">
@@ -509,9 +496,10 @@
                             <option value="완료">완료</option>
                         </select>
                     </div>
-                    <div class="grid grid-cols-2 gap-2">
+                    <div class="grid grid-cols-3 gap-2">
                         <button onclick="SafetyModule.printAllRisk()" title="검색/필터 결과를 개별 문서로 인쇄" class="text-xs px-2.5 py-2 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-xl transition-colors">🖨️ 목록출력</button>
                         <button onclick="SafetyModule.exportRiskListExcel()" title="검색/필터 결과를 공식 서식 엑셀로 저장 (첨부사진 포함)" class="text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력</button>
+                        <button onclick="SafetyModule.exportRiskListExcel('share')" title="공유하기 (카카오톡 등)" class="text-xs px-2.5 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors">📤 공유</button>
                     </div>
                     <div id="risk-list" class="space-y-2"></div>
                 </div>
@@ -527,7 +515,10 @@
                         </button>
                     </div>
                     <div id="accident-summary" class="grid grid-cols-3 gap-2"></div>
-                    <button onclick="SafetyModule.exportAccidentReportListExcel()" title="등록된 전체 재해기록을 산업재해조사표(별지 제30호서식) 공식 서식(건별 시트)으로 저장" class="w-full text-xs px-2.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors">📋 산업재해조사표 전체 출력 (공식 서식)</button>
+                    <div class="flex gap-1.5">
+                        <button onclick="SafetyModule.exportAccidentReportListExcel()" title="등록된 전체 재해기록을 산업재해조사표(별지 제30호서식) 공식 서식(건별 시트)으로 저장" class="flex-1 text-xs px-2.5 py-2 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-xl transition-colors">📋 산업재해조사표 전체 출력 (공식 서식)</button>
+                        <button onclick="SafetyModule.exportAccidentReportListExcel('share')" title="공유하기 (카카오톡 등)" class="text-xs px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors">📤</button>
+                    </div>
                     <div id="accident-list" class="space-y-2"></div>
                 </div>
 
@@ -584,7 +575,10 @@
                         <button onclick="SafetyModule.setPtwFilter('종료')" data-ptw-filter="종료" class="px-3 py-1.5 rounded-xl font-bold whitespace-nowrap text-[11px] bg-slate-100 text-slate-600">종료됨</button>
                     </div>
                     <div id="ptw-summary" class="grid grid-cols-3 gap-1.5 text-center"></div>
-                    <button onclick="SafetyModule.exportPtwListExcel()" title="현재 필터 결과를 공식 작업허가서 서식(가스측정표·근로자명단·4단계결재 포함, 건별 시트)으로 저장" class="w-full text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력 (공식 서식)</button>
+                    <div class="flex gap-1.5">
+                        <button onclick="SafetyModule.exportPtwListExcel()" title="현재 필터 결과를 공식 작업허가서 서식(가스측정표·근로자명단·4단계결재 포함, 건별 시트)으로 저장" class="flex-1 text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력 (공식 서식)</button>
+                        <button onclick="SafetyModule.exportPtwListExcel('share')" title="공유하기 (카카오톡 등)" class="text-xs px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors">📤</button>
+                    </div>
                     <div id="ptw-list" class="space-y-2"></div>
                 </div>
 
@@ -598,7 +592,10 @@
                             + 교육 등록
                         </button>
                     </div>
-                    <button onclick="SafetyModule.exportEduListExcel()" title="전체 안전교육일지를 공식 서식(교육구분·참석자 서명·사진첨부 포함, 건별 시트)으로 저장" class="w-full text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력 (공식 서식)</button>
+                    <div class="flex gap-1.5">
+                        <button onclick="SafetyModule.exportEduListExcel()" title="전체 안전교육일지를 공식 서식(교육구분·참석자 서명·사진첨부 포함, 건별 시트)으로 저장" class="flex-1 text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력 (공식 서식)</button>
+                        <button onclick="SafetyModule.exportEduListExcel('share')" title="공유하기 (카카오톡 등)" class="text-xs px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors">📤</button>
+                    </div>
                     <div id="edu-list" class="space-y-2"></div>
                 </div>
 
@@ -612,7 +609,10 @@
                             + TBM 작성
                         </button>
                     </div>
-                    <button onclick="SafetyModule.exportTbmListExcel()" title="전체 TBM일지를 공식 서식(위험요인·안전대책표, 참석자 서명 포함, 건별 시트)으로 저장" class="w-full text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력 (공식 서식)</button>
+                    <div class="flex gap-1.5">
+                        <button onclick="SafetyModule.exportTbmListExcel()" title="전체 TBM일지를 공식 서식(위험요인·안전대책표, 참석자 서명 포함, 건별 시트)으로 저장" class="flex-1 text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력 (공식 서식)</button>
+                        <button onclick="SafetyModule.exportTbmListExcel('share')" title="공유하기 (카카오톡 등)" class="text-xs px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors">📤</button>
+                    </div>
                     <div id="tbm-list" class="space-y-2"></div>
                 </div>
 
@@ -650,7 +650,10 @@
                             <option value="합동점검">합동점검</option>
                         </select>
                     </div>
-                    <button onclick="SafetyModule.exportLegalMeetExcel()" title="검색/필터 결과를 공식 서식 엑셀로 저장 (첨부사진 포함)" class="w-full text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력</button>
+                    <div class="flex gap-1.5">
+                        <button onclick="SafetyModule.exportLegalMeetExcel()" title="검색/필터 결과를 공식 서식 엑셀로 저장 (첨부사진 포함)" class="flex-1 text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력</button>
+                        <button onclick="SafetyModule.exportLegalMeetExcel('share')" title="공유하기 (카카오톡 등)" class="text-xs px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors">📤</button>
+                    </div>
                     <div id="legalmeet-list" class="space-y-2"></div>
                 </div>
 
@@ -795,7 +798,10 @@
                     </div>
 
                     <div class="space-y-2">
-                        <button onclick="Actions.exportChecklistExcel()" title="검색·필터된 점검표를 공식 서식 엑셀로 저장" class="w-full text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력</button>
+                        <div class="flex gap-1.5">
+                            <button onclick="Actions.exportChecklistExcel()" title="검색·필터된 점검표를 공식 서식 엑셀로 저장" class="flex-1 text-xs px-2.5 py-2 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-xl transition-colors">📊 엑셀출력</button>
+                            <button onclick="Actions.exportChecklistExcel('share')" title="공유하기 (카카오톡 등)" class="text-xs px-3 py-2 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-xl transition-colors">📤</button>
+                        </div>
                         <input type="text" id="chk-search-input" oninput="Actions.searchChecklist(this.value)" placeholder="🔍 법규 항목 / 태그 / 처벌규정 검색..." class="w-full text-xs p-2.5 bg-white border border-slate-200 rounded-xl focus:outline-none focus:border-slate-800 transition-colors shadow-xs">
 
                         <div class="flex justify-between items-center px-1 pt-1">
@@ -929,7 +935,10 @@
                                 <div class="space-y-0.5"><label class="text-[10px] font-bold text-slate-500">차주 주요 안전보건 추진계획</label><textarea id="wlog-nextplan" rows="2" placeholder="예: 폭염 대비 온열질환 예방점검 (08.10)" class="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg" onchange="SafetyModule.saveWeeklyLogNotes()"></textarea></div>
                                 <div class="space-y-0.5"><label class="text-[10px] font-bold text-slate-500">특이사항 및 건의사항</label><textarea id="wlog-notes" rows="2" placeholder="예: 하절기 용품 배포 완료, 예산 신청 건 등" class="w-full text-xs p-2 bg-white border border-slate-200 rounded-lg" onchange="SafetyModule.saveWeeklyLogNotes()"></textarea></div>
                             </div>
-                            <button onclick="Actions.exportTasksExcel()" title="전체 업무 목록을 공식 서식 엑셀로 저장" class="w-full py-2.5 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors">📊 전체 업무일지 엑셀출력</button>
+                            <div class="flex gap-1.5">
+                                <button onclick="Actions.exportTasksExcel()" title="전체 업무 목록을 공식 서식 엑셀로 저장" class="flex-1 py-2.5 bg-slate-700 hover:bg-slate-800 text-white font-bold text-xs rounded-xl transition-colors">📊 전체 업무일지 엑셀출력</button>
+                                <button onclick="Actions.exportTasksExcel('share')" title="공유하기 (카카오톡 등)" class="px-3.5 py-2.5 bg-sky-600 hover:bg-sky-700 text-white font-bold text-xs rounded-xl transition-colors">📤</button>
+                            </div>
                             <div class="grid grid-cols-2 gap-2 pt-1">
                                 <button onclick="SafetyModule.printWeeklyLog()" class="py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-colors">🖨️ 주간일지 출력</button>
                                 <button onclick="SafetyModule.exportWeeklyExcel()" class="py-2.5 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl shadow-xs transition-colors">📊 엑셀로 내보내기(수정가능)</button>
@@ -940,24 +949,24 @@
 
                         <h4 class="text-xs font-bold text-slate-800">📊 모듈별 Excel 내보내기 (전체 기간)</h4>
                         <div class="grid grid-cols-2 gap-2">
-                            <button onclick="SafetyModule.exportExcel('risk')" class="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 위험성평가</button>
-                            <button onclick="SafetyModule.exportExcel('accident')" class="py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 산업재해</button>
-                            <button onclick="SafetyModule.exportExcel('msds')" class="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 MSDS 화학물질</button>
-                            <button onclick="SafetyModule.exportExcel('health')" class="py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 건강진단</button>
-                            <button onclick="SafetyModule.exportExcel('ptw')" class="py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 작업허가(PTW)</button>
-                            <button onclick="SafetyModule.exportExcel('edu')" class="py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 안전교육</button>
-                            <button onclick="SafetyModule.exportExcel('tbm')" class="py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 TBM 일지</button>
-                            <button onclick="SafetyModule.exportExcel('appoint')" class="py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 법정선임</button>
-                            <button onclick="SafetyModule.exportExcel('legalmeet')" class="py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 법정회의·점검</button>
-                            <button onclick="SafetyModule.exportExcel('ppe')" class="py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 PPE 지급이력</button>
-                            <button onclick="SafetyModule.exportExcel('contractor')" class="py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 협력업체</button>
-                            <button onclick="SafetyModule.exportExcel('nearmiss')" class="py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 아차사고</button>
-                            <button onclick="SafetyModule.exportExcel('voice')" class="py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 안전의 소리함</button>
-                            <button onclick="SafetyModule.exportExcel('capa')" class="py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 CAPA(개선조치)</button>
-                            <button onclick="SafetyModule.exportExcel('statutory')" class="py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 법정검사</button>
-                            <button onclick="SafetyModule.exportExcel('equipment')" class="py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 설비관리</button>
-                            <button onclick="SafetyModule.exportExcel('orgchart')" class="py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 안전관리조직도</button>
-                            <button onclick="SafetyModule.exportExcel('emergency')" class="py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 비상연락망</button>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('risk')" class="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 위험성평가</button><button onclick="SafetyModule.exportExcel('risk','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('accident')" class="flex-1 py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 산업재해</button><button onclick="SafetyModule.exportExcel('accident','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('msds')" class="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 MSDS 화학물질</button><button onclick="SafetyModule.exportExcel('msds','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('health')" class="flex-1 py-2 px-3 bg-emerald-600 hover:bg-emerald-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 건강진단</button><button onclick="SafetyModule.exportExcel('health','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('ptw')" class="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 작업허가(PTW)</button><button onclick="SafetyModule.exportExcel('ptw','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('edu')" class="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 안전교육</button><button onclick="SafetyModule.exportExcel('edu','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('tbm')" class="flex-1 py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 TBM 일지</button><button onclick="SafetyModule.exportExcel('tbm','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('appoint')" class="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 법정선임</button><button onclick="SafetyModule.exportExcel('appoint','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('legalmeet')" class="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 법정회의·점검</button><button onclick="SafetyModule.exportExcel('legalmeet','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('ppe')" class="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 PPE 지급이력</button><button onclick="SafetyModule.exportExcel('ppe','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('contractor')" class="flex-1 py-2 px-3 bg-indigo-600 hover:bg-indigo-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 협력업체</button><button onclick="SafetyModule.exportExcel('contractor','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('nearmiss')" class="flex-1 py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 아차사고</button><button onclick="SafetyModule.exportExcel('nearmiss','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('voice')" class="flex-1 py-2 px-3 bg-rose-600 hover:bg-rose-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 안전의 소리함</button><button onclick="SafetyModule.exportExcel('voice','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('capa')" class="flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 CAPA(개선조치)</button><button onclick="SafetyModule.exportExcel('capa','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('statutory')" class="flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 법정검사</button><button onclick="SafetyModule.exportExcel('statutory','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('equipment')" class="flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 설비관리</button><button onclick="SafetyModule.exportExcel('equipment','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('orgchart')" class="flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 안전관리조직도</button><button onclick="SafetyModule.exportExcel('orgchart','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
+                            <div class="flex gap-1"><button onclick="SafetyModule.exportExcel('emergency')" class="flex-1 py-2 px-3 bg-teal-600 hover:bg-teal-700 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1">📊 비상연락망</button><button onclick="SafetyModule.exportExcel('emergency','share')" title="공유하기" class="px-2 bg-white/15 hover:bg-white/25 text-white rounded-xl">📤</button></div>
                         </div>
 
                         <button onclick="Actions.printReport()" class="w-full py-2.5 bg-amber-500 hover:bg-amber-600 text-slate-950 font-bold text-xs rounded-xl shadow-xs transition-colors">
@@ -1254,7 +1263,7 @@
                 <div class="bg-slate-100 rounded-2xl p-3.5 border border-slate-200 text-[11px] text-slate-600 space-y-1">
                     <div class="font-bold text-slate-800">SAFE DUCKY (세이프더키)</div>
                     <div>본 시스템은 KOSHA 가이드라인, 산업안전보건법 및 중대재해처벌법을 준수합니다.</div>
-                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200 mt-2">v5.28 · © 2026 SAFE DUCKY</div>
+                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200 mt-2">v5.29 · © 2026 SAFE DUCKY</div>
                 </div>
             </section>
 
@@ -1419,7 +1428,17 @@
                     <div id="font-scale-options" class="grid grid-cols-3 gap-2 text-xs"></div>
                     <p class="text-[10px] text-slate-400 leading-tight">안드로이드(Chrome·설치된 앱)에서 적용됩니다. iOS(Safari)는 이 기능을 지원하지 않아 화면에 반영되지 않을 수 있습니다.</p>
                 </div>
-                <p class="text-[10px] text-slate-400 leading-tight pt-2 border-t border-slate-100">사업장 정보·API 키·백업/복원·감사로그 등은 하단 <b>마이페이지</b> 탭에서 관리합니다.</p>
+                <div class="space-y-1.5 pt-2 border-t border-slate-100">
+                    <label class="text-[11px] font-bold text-slate-600">앱을 열 때 시작 화면</label>
+                    <div id="start-tab-options" class="grid grid-cols-4 gap-1.5 text-[11px]"></div>
+                </div>
+                <div class="space-y-1.5 pt-2 border-t border-slate-100">
+                    <label class="text-[11px] font-bold text-slate-600">저장공간</label>
+                    <p id="storage-usage-info" class="text-[10px] text-slate-500">-</p>
+                    <button onclick="Actions.clearAppCache()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-xl transition-colors">🧹 캐시 삭제 후 새로고침</button>
+                    <p class="text-[10px] text-slate-400 leading-tight">등록된 위험성평가·업무 등 데이터는 지워지지 않습니다. 앱 화면 파일만 다시 받아와 오래된 화면이 남아있는 문제를 해결할 때 씁니다.</p>
+                </div>
+                <p class="text-[10px] text-slate-400 leading-tight pt-2 border-t border-slate-100">사업장 정보·API 키·백업/복원·감사로그 등은 하단 <b>마이페이지</b> 탭에서 관리합니다.<br>SAFE DUCKY v5.29 · DB v38</p>
             </div>
         </div>
 
@@ -1819,7 +1838,7 @@
                 if (bytes < 1024) return bytes + ' B';
                 return (bytes / 1024).toFixed(1) + ' KB';
             },
-            async exportCSV(filename, rows) {
+            async exportCSV(filename, rows, mode = 'download') {
                 if (!rows || !rows.length) {
                     Toast.show('내보낼 데이터가 없습니다.', 'error');
                     return;
@@ -1842,9 +1861,13 @@
                     }).join('\n');
 
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const result = await this.deliverBlob(blob, `${filename}.csv`, 'text/csv;charset=utf-8;');
-                if (result === 'shared') Toast.show(`${filename}.csv 공유 창을 열었습니다.`, 'success');
-                else if (result === 'downloaded') Toast.show(`${filename}.csv 내보내기 완료!`, 'success');
+                if (mode === 'share') {
+                    const result = await this.shareBlob(blob, `${filename}.csv`, 'text/csv;charset=utf-8;');
+                    if (result === 'shared') Toast.show(`${filename}.csv 공유를 완료했습니다.`, 'success');
+                } else {
+                    this.downloadBlob(blob, `${filename}.csv`);
+                    Toast.show(`${filename}.csv 내보내기 완료!`, 'success');
+                }
             },
             // ============================================================
             // deliverBlob — 파일을 "공유" 또는 "다운로드"로 전달 (2026-09-12 추가)
@@ -1890,6 +1913,45 @@
                 document.body.removeChild(link);
                 setTimeout(() => URL.revokeObjectURL(url), 1000);
                 return 'downloaded';
+            },
+            // 2026-09-12(v5.29): 실기기 테스트 결과 deliverBlob()의 "공유 우선, 실패시 자동 다운로드"
+            // 방식이 실제로는 공유 시트가 뜨지 않고 매번 조용히 다운로드로만 동작한다는 제보를
+            // 받았습니다. 사용자가 "공유를 눌렀는데 다운로드가 됐다"는 걸 알아챌 방법이 없어
+            // 혼란스러웠던 것으로 보입니다. 그래서 백업/단일HTML 내보내기(공유 실패해도 어차피
+            // 다운로드로 백업 자체는 남아야 하는 것들)는 deliverBlob()을 그대로 쓰고, "엑셀출력"
+            // 버튼처럼 다운로드가 항상 보장되어야 하는 곳은 아래 downloadBlob()으로 무조건
+            // 다운로드만 하도록 되돌리고, 그 옆에 별도의 "공유" 버튼을 새로 만들어 shareBlob()을
+            // 쓰도록 분리했습니다 — 두 동작이 섞이지 않아야 실패를 숨기지 않을 수 있습니다.
+            downloadBlob(blob, filename) {
+                const url = URL.createObjectURL(blob);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
+                document.body.appendChild(link);
+                link.click();
+                document.body.removeChild(link);
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+            },
+            // "공유" 전용 버튼에서만 씁니다. deliverBlob()과 달리 공유가 안 되면 조용히
+            // 다운로드로 대체하지 않고, 왜 안 되는지를 토스트로 분명히 알려줍니다 — 사용자가
+            // "공유 버튼을 눌렀는데 아무 반응이 없다/다운로드가 됐다"고 혼란스러워하지 않도록.
+            async shareBlob(blob, filename, mimeType) {
+                let file = null;
+                try { file = new File([blob], filename, { type: mimeType || blob.type }); } catch (e) { file = null; }
+
+                if (!file || !navigator.canShare || !navigator.canShare({ files: [file] })) {
+                    Toast.show('이 브라우저/기기에서는 파일 공유가 지원되지 않습니다. "엑셀출력" 버튼으로 다운로드해주세요.', 'error');
+                    return 'unsupported';
+                }
+                try {
+                    await navigator.share({ files: [file] });
+                    return 'shared';
+                } catch (e) {
+                    if (e && e.name === 'AbortError') return 'cancelled';
+                    console.error('[공유 실패]', e);
+                    Toast.show('공유에 실패했습니다. "엑셀출력" 버튼으로 다운로드해주세요.', 'error');
+                    return 'failed';
+                }
             },
             // sheets: [{ name, header:[..], rows:[[..],[..]], widths:[..] }] - 실제 .xlsx 파일로 내보내기 (SheetJS)
             exportExcelFile(filename, sheets) {
@@ -2164,12 +2226,15 @@
             const micBtnId = `mic-btn-${targetId}`;
             const langSelId = `mic-lang-${targetId}`;
             const statusId = `mic-status-${targetId}`;
+            // v5.29: opts.showLangSelect === false 인 곳(예: 위험신고)은 다국어 선택 UI 없이
+            // 한국어(또는 opts.lang)로 고정합니다 — 굳이 필요 없다는 사용자 피드백에 따른 조치.
+            const showLangSelect = opts.showLangSelect !== false;
 
             wrap.innerHTML = `
               <button type="button" id="${micBtnId}" class="w-8 h-8 flex-shrink-0 rounded-full bg-slate-800 hover:bg-slate-900 text-white flex items-center justify-center text-xs transition-all" title="음성으로 입력">🎙️</button>
-              <select id="${langSelId}" class="text-[10px] bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-1 font-semibold text-slate-600">
+              ${showLangSelect ? `<select id="${langSelId}" class="text-[10px] bg-slate-50 border border-slate-200 rounded-lg px-1.5 py-1 font-semibold text-slate-600">
                 ${this.LANGS.map(l => `<option value="${l.code}" ${l.code === (opts.lang || 'ko-KR') ? 'selected' : ''}>${l.label}</option>`).join('')}
-              </select>
+              </select>` : ''}
               <span id="${statusId}" class="text-[10px] text-slate-400 flex-1 truncate"></span>
             `;
             target.insertAdjacentElement('afterend', wrap);
@@ -3180,7 +3245,22 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
         // 규칙: 여기 등록되는 모든 migration 함수는 "필드 추가"만 하며,
         // 기존 필드 값은 절대 덮어쓰거나 삭제하지 않는다.
         // ============================================================
-        const DB_VERSION = 37; // v37: 2026-09-12 사용자가 "오프라인 전용 구조로 바뀌면서 엑셀 파일을
+        const DB_VERSION = 38; // v38: 2026-09-12 사용자 실기기 테스트 결과 v37의 "공유 우선,
+        // 실패시 자동 다운로드" 방식이 실제로는 공유가 안 뜨고 조용히 다운로드만 되어 혼란스럽다는
+        // 제보 → "엑셀출력"(항상 다운로드 보장)과 "공유"(카카오톡 등, 실패 시 이유를 토스트로
+        // 알림)를 별도 버튼으로 분리(_downloadWorkbook·_downloadRiskWorkbook·exportGeneralExcel·
+        // exportCSV·exportItemExcel에 mode 파라미터 추가, Utils.downloadBlob/shareBlob 신설).
+        // 백업(JSON)·단일HTML 내보내기는 이번 제보 대상이 아니라 기존 deliverBlob(공유 우선,
+        // 실패시 다운로드) 방식 그대로 둠. 그 외: 위험신고 음성입력의 언어선택 UI 제거(한국어
+        // 고정, VoiceInput.attach에 showLangSelect 옵션 추가) / 안전모듈 탭 "11대 안전실무 통합"
+        // 배지 제거(실제 모듈 수와 불일치) / 헤더의 🖨️ 인쇄 아이콘을 오늘 요약 텍스트 공유로 교체
+        // (tab-safety·마이페이지의 인쇄 버튼은 유지) / 홈 화면의 "오늘의 안전상태" 4칸 요약 제거하고
+        // 바로가기 4개(위험발견/오늘점검/TBM/CAPA, 위험발견·오늘점검은 다른 곳과 중복)를
+        // State.safetyMenuOrder 상위 5개로 교체(사용자가 메뉴 순서를 바꾸면 자동 반영) / 시스템
+        // 설정(⚙️)에 시작 화면·저장공간 관리(캐시 삭제) 추가. 데이터 구조 변경 없음
+        // (safetyData·STORAGE_KEY 필드는 무변경 — DisplayPrefs는 별도 localStorage 키라 마이그레이션
+        // 대상 아님).
+        // v37: 2026-09-12 사용자가 "오프라인 전용 구조로 바뀌면서 엑셀 파일을
         // 휴대폰으로 받은 뒤 카카오톡 등으로 옮기는 게 번거롭고 휴대폰 용량도 차지한다"고 지적 →
         // 모든 엑셀·백업(JSON)·단일HTML 내보내기가 파일을 "다운로드" 폴더에 떨어뜨리기만 하던
         // 것을, 브라우저가 지원하면(Web Share API, navigator.canShare({files})) 파일 탐색기를
@@ -4174,16 +4254,32 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
         const DisplayPrefs = {
             KEY: 'safeducky_display_prefs',
             SCALES: { sm: 0.92, md: 1, lg: 1.15 },
+            // v5.29: "설정에 글자크기밖에 없다"는 피드백에 따라 시작 탭 등 진짜로 동작하는
+            // 설정을 더 추가했습니다. 전부 이 localStorage 키 하나에 함께 저장합니다
+            // (raw._all() 형태로 한번에 읽고 쓰면 설정이 늘어나도 get/set 패턴이 그대로 유지됨).
+            START_TABS: ['timeline', 'safety', 'dashboard', 'reports'],
+            _read() {
+                try { return JSON.parse(localStorage.getItem(this.KEY) || '{}'); } catch (e) { return {}; }
+            },
+            _write(patch) {
+                try { localStorage.setItem(this.KEY, JSON.stringify({ ...this._read(), ...patch })); } catch (e) {}
+            },
             get() {
-                try {
-                    const raw = JSON.parse(localStorage.getItem(this.KEY) || '{}');
-                    return this.SCALES[raw.fontScale] ? raw.fontScale : 'md';
-                } catch (e) { return 'md'; }
+                const raw = this._read();
+                return this.SCALES[raw.fontScale] ? raw.fontScale : 'md';
             },
             set(key) {
                 if (!this.SCALES[key]) return;
-                try { localStorage.setItem(this.KEY, JSON.stringify({ fontScale: key })); } catch (e) {}
+                this._write({ fontScale: key });
                 this.apply();
+            },
+            getStartTab() {
+                const raw = this._read();
+                return this.START_TABS.includes(raw.startTab) ? raw.startTab : 'timeline';
+            },
+            setStartTab(tab) {
+                if (!this.START_TABS.includes(tab)) return;
+                this._write({ startTab: tab });
             },
             apply() {
                 const root = document.getElementById('app-root');
@@ -4831,6 +4927,8 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                     else cls = isAi ? 'px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap bg-indigo-900/80 text-indigo-200 border border-indigo-500/30 hover:bg-indigo-800' : 'px-3 py-1.5 rounded-xl font-semibold whitespace-nowrap bg-slate-800 text-slate-300 hover:bg-slate-700';
                     return `<button onclick="SafetyModule.switchSubtab('${key}')" id="subnav-${key}" class="${cls}">${item.emoji} ${Utils.escapeHTML(item.label)}</button>`;
                 }).join('');
+                // 홈 화면 바로가기 5개도 이 순서를 그대로 쓰므로, 메뉴 순서가 바뀔 때마다 같이 갱신합니다.
+                if (typeof Actions !== 'undefined' && Actions.renderQuickActions) Actions.renderQuickActions();
             },
             toggleSafetyMenuPanel() {
                 const panel = document.getElementById('safety-menu-panel');
@@ -5698,6 +5796,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                             <div class="flex gap-1">
                                 <button onclick="SafetyModule.printRiskItem('${item.id}')" title="이 항목만 인쇄" class="px-2.5 py-1 bg-slate-800 hover:bg-slate-900 text-white font-bold rounded-lg transition-colors">🖨️</button>
                                 <button onclick="SafetyModule.exportRiskItemExcel('${item.id}')" title="이 항목만 엑셀로 저장" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors">📊</button>
+                                <button onclick="SafetyModule.exportRiskItemExcel('${item.id}', 'share')" title="공유하기 (카카오톡 등)" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg transition-colors">📤</button>
                                 <button onclick="SafetyModule.duplicateRisk('${item.id}')" title="이 평가를 복사해 재평가로 등록" class="px-2.5 py-1 bg-indigo-50 hover:bg-indigo-100 text-indigo-700 font-bold rounded-lg transition-colors">복사</button>
                                 ${SafetyModule.capaButtonHtml('risk', item.id)}
                                 <button onclick="SafetyModule.openModal('risk', '${item.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg transition-colors">수정</button>
@@ -5768,6 +5867,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                                 ${SafetyModule.capaButtonHtml('accident', item.id)}
                                 ${SafetyModule.itemExcelButtonHtml('accident', item.id)}
                                 <button onclick="SafetyModule.exportAccidentReportExcel('${item.id}')" title="이 재해기록을 산업재해조사표(별지 제30호서식) 공식 서식으로 저장" class="px-2.5 py-1 bg-indigo-600 hover:bg-indigo-700 text-white font-bold rounded-lg transition-colors">📋 조사표</button>
+                                <button onclick="SafetyModule.exportAccidentReportExcel('${item.id}', 'share')" title="산업재해조사표 공유하기 (카카오톡 등)" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg transition-colors">📤</button>
                                 <button onclick="SafetyModule.openModal('accident', '${item.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg transition-colors">수정</button>
                                 <button onclick="SafetyModule.deleteItem('accident', '${item.id}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-lg transition-colors">삭제</button>
                             </div>
@@ -8769,22 +8869,22 @@ ${continueFrom}
             // 사진 삽입이 비동기라 함수 전체가 async입니다. 버튼에서 그냥 호출해도
             // 되도록 내부에서 오류를 처리하고 토스트로 알립니다.
             // ============================================================
-            async exportExcel(type) {
+            async exportExcel(type, mode = 'download') {
                 const rows = State.safetyData[type] || [];
                 // v24/v25: PTW·TBM은 항목별 서식(가스측정표/위험요인표·서명표 등)이 있는 전용 공식 서식(건별 시트)을 씁니다.
                 if (type === 'ptw') {
                     if (!rows.length) { Toast.show('내보낼 데이터가 없습니다.', 'error'); return; }
-                    this._downloadWorkbook(() => this._buildPtwWorkbook(rows), `작업허가서_전체_${todayStr}`);
+                    this._downloadWorkbook(() => this._buildPtwWorkbook(rows), `작업허가서_전체_${todayStr}`, mode);
                     return;
                 }
                 if (type === 'tbm') {
                     if (!rows.length) { Toast.show('내보낼 데이터가 없습니다.', 'error'); return; }
-                    this._downloadWorkbook(() => this._buildTbmWorkbook(rows), `TBM일지_전체_${todayStr}`);
+                    this._downloadWorkbook(() => this._buildTbmWorkbook(rows), `TBM일지_전체_${todayStr}`, mode);
                     return;
                 }
                 if (type === 'edu') {
                     if (!rows.length) { Toast.show('내보낼 데이터가 없습니다.', 'error'); return; }
-                    this._downloadWorkbook(() => this._buildEduWorkbook(rows), `안전교육일지_전체_${todayStr}`);
+                    this._downloadWorkbook(() => this._buildEduWorkbook(rows), `안전교육일지_전체_${todayStr}`, mode);
                     return;
                 }
                 // v27: MSDS는 원래부터 여러 물질을 한 표로 관리하는 대장이라(사고처럼 건별
@@ -8792,7 +8892,7 @@ ${continueFrom}
                 // 있는 전용 서식(_buildMsdsWorkbook)을 그대로 한 시트에 씁니다.
                 if (type === 'msds') {
                     if (!rows.length) { Toast.show('내보낼 데이터가 없습니다.', 'error'); return; }
-                    this._downloadWorkbook(() => this._buildMsdsWorkbook(rows), `MSDS관리대장_${todayStr}`);
+                    this._downloadWorkbook(() => this._buildMsdsWorkbook(rows), `MSDS관리대장_${todayStr}`, mode);
                     return;
                 }
                 const cols = EXCEL_COLUMNS[type];
@@ -8800,7 +8900,7 @@ ${continueFrom}
 
                 if (!rows.length) { Toast.show('내보낼 데이터가 없습니다.', 'error'); return; }
                 // 서식 정의가 없는(새로 추가된) 모듈은 예전처럼 단순 표로라도 반드시 나오게 합니다.
-                if (!cols) { Utils.exportCSV(`safety_export_${type}`, rows); return; }
+                if (!cols) { Utils.exportCSV(`safety_export_${type}`, rows, mode); return; }
                 if (typeof ExcelJS === 'undefined') {
                     Toast.show('엑셀 라이브러리를 불러오지 못했습니다. 인터넷 연결을 확인해주세요.', 'error');
                     return;
@@ -8811,9 +8911,13 @@ ${continueFrom}
                     const wb = await this._buildGenericWorkbook(type, rows, cols);
                     const buffer = await wb.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const result = await Utils.deliverBlob(blob, `${label}_${todayStr}.xlsx`, blob.type);
-                    if (result === 'shared') Toast.show(`${label} 엑셀을 공유했습니다.`, 'success');
-                    else if (result === 'downloaded') Toast.show(`${label} ${rows.length}건을 엑셀로 저장했습니다. (엑셀에서 수정 후 출력하실 수 있습니다)`, 'success');
+                    if (mode === 'share') {
+                        const result = await Utils.shareBlob(blob, `${label}_${todayStr}.xlsx`, blob.type);
+                        if (result === 'shared') Toast.show(`${label} 엑셀을 공유했습니다.`, 'success');
+                    } else {
+                        Utils.downloadBlob(blob, `${label}_${todayStr}.xlsx`);
+                        Toast.show(`${label} ${rows.length}건을 엑셀로 저장했습니다. (엑셀에서 수정 후 출력하실 수 있습니다)`, 'success');
+                    }
                 } catch (err) {
                     console.error('[엑셀 출력 실패]', err);
                     Toast.show('엑셀을 만들지 못했습니다: ' + (err && err.message ? err.message : '알 수 없는 오류'), 'error');
@@ -9358,7 +9462,7 @@ ${continueFrom}
                 return Math.max(minHeight || 30, lines * 15 + 14);
             },
             // buildFn이 반환하는 워크북을 버퍼로 변환해 다운로드까지 처리하는 공용 헬퍼.
-            async _downloadWorkbook(buildFn, filename) {
+            async _downloadWorkbook(buildFn, filename, mode = 'download') {
                 if (typeof ExcelJS === 'undefined') {
                     Toast.show('엑셀 서식 라이브러리 로드에 실패했습니다. 인터넷 연결을 확인 후 다시 시도해주세요.', 'error');
                     return;
@@ -9367,9 +9471,13 @@ ${continueFrom}
                     const wb = await buildFn();
                     const buffer = await wb.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const result = await Utils.deliverBlob(blob, `${filename}.xlsx`, blob.type);
-                    if (result === 'shared') Toast.show(`${filename}.xlsx 공유 창을 열었습니다.`, 'success');
-                    else if (result === 'downloaded') Toast.show(`${filename}.xlsx 내보내기 완료! (엑셀에서 자유롭게 수정 후 출력하실 수 있습니다)`, 'success');
+                    if (mode === 'share') {
+                        const result = await Utils.shareBlob(blob, `${filename}.xlsx`, blob.type);
+                        if (result === 'shared') Toast.show(`${filename}.xlsx 공유를 완료했습니다.`, 'success');
+                    } else {
+                        Utils.downloadBlob(blob, `${filename}.xlsx`);
+                        Toast.show(`${filename}.xlsx 내보내기 완료! (엑셀에서 자유롭게 수정 후 출력하실 수 있습니다)`, 'success');
+                    }
                 } catch (e) {
                     console.error('엑셀 생성 실패', e);
                     Toast.show('엑셀 파일 생성 중 오류가 발생했습니다.', 'error');
@@ -9549,7 +9657,7 @@ ${continueFrom}
                 ws.pageSetup.printTitlesRow = '20:21';
                 return wb;
             },
-            async _downloadRiskWorkbook(items, filename, headerInfo) {
+            async _downloadRiskWorkbook(items, filename, headerInfo, mode = 'download') {
                 if (typeof ExcelJS === 'undefined') {
                     Toast.show('엑셀 서식 라이브러리 로드에 실패했습니다. 인터넷 연결을 확인 후 다시 시도해주세요.', 'error');
                     return;
@@ -9558,9 +9666,13 @@ ${continueFrom}
                     const wb = await this._buildRiskWorkbook(items, headerInfo);
                     const buffer = await wb.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const result = await Utils.deliverBlob(blob, `${filename}.xlsx`, blob.type);
-                    if (result === 'shared') Toast.show(`${filename}.xlsx 공유 창을 열었습니다.`, 'success');
-                    else if (result === 'downloaded') Toast.show(`${filename}.xlsx 내보내기 완료! (엑셀에서 자유롭게 수정 후 출력하실 수 있습니다)`, 'success');
+                    if (mode === 'share') {
+                        const result = await Utils.shareBlob(blob, `${filename}.xlsx`, blob.type);
+                        if (result === 'shared') Toast.show(`${filename}.xlsx 공유를 완료했습니다.`, 'success');
+                    } else {
+                        Utils.downloadBlob(blob, `${filename}.xlsx`);
+                        Toast.show(`${filename}.xlsx 내보내기 완료! (엑셀에서 자유롭게 수정 후 출력하실 수 있습니다)`, 'success');
+                    }
                 } catch (e) {
                     console.error('위험성평가 엑셀 생성 실패', e);
                     Toast.show('엑셀 파일 생성 중 오류가 발생했습니다.', 'error');
@@ -9576,11 +9688,11 @@ ${continueFrom}
             // 목록 출력과 똑같은 _buildGenericWorkbook()을 쓰되 항목 하나만 넘깁니다.
             // 서식이 목록과 완전히 같으므로 따로 유지보수할 필요가 없습니다.
             // ============================================================
-            async exportItemExcel(type, id) {
+            async exportItemExcel(type, id, mode = 'download') {
                 // v24/v25: PTW·TBM은 전용 공식 서식(건별 시트)을 씁니다.
-                if (type === 'ptw') { return this.exportPtwItemExcel(id); }
-                if (type === 'tbm') { return this.exportTbmItemExcel(id); }
-                if (type === 'edu') { return this.exportEduItemExcel(id); }
+                if (type === 'ptw') { return this.exportPtwItemExcel(id, mode); }
+                if (type === 'tbm') { return this.exportTbmItemExcel(id, mode); }
+                if (type === 'edu') { return this.exportEduItemExcel(id, mode); }
                 const item = (State.safetyData[type] || []).find(i => String(i.id) === String(id));
                 if (!item) { Toast.show('항목을 찾을 수 없습니다.', 'error'); return; }
                 if (type !== 'msds') {
@@ -9602,27 +9714,34 @@ ${continueFrom}
                     const name = String(item.title || item.name || item.topic || item.companyName || item.itemType || item.role || item.victimName || label)
                         .replace(/[\\\/:?*\[\]"<>|]/g, ' ').trim().slice(0, 40) || label;
                     const filename = `${label}_${name}_${item.date || item.issueDate || item.appointDate || todayStr}.xlsx`;
-                    const result = await Utils.deliverBlob(blob, filename, blob.type);
-                    if (result === 'shared') Toast.show('엑셀을 공유했습니다.', 'success');
-                    else if (result === 'downloaded') Toast.show('엑셀로 저장했습니다.', 'success');
+                    if (mode === 'share') {
+                        const result = await Utils.shareBlob(blob, filename, blob.type);
+                        if (result === 'shared') Toast.show('엑셀을 공유했습니다.', 'success');
+                    } else {
+                        Utils.downloadBlob(blob, filename);
+                        Toast.show('엑셀로 저장했습니다.', 'success');
+                    }
                 } catch (err) {
                     console.error('[건별 엑셀 출력 실패]', err);
                     Toast.show('엑셀을 만들지 못했습니다: ' + (err && err.message ? err.message : '알 수 없는 오류'), 'error');
                 }
             },
             // 카드 우측 버튼줄에 넣는 엑셀 버튼. 모든 모듈이 같은 모양을 쓰도록 한 곳에서 만듭니다.
+            // v5.29: "엑셀출력"(다운로드 보장)과 "공유"(카카오톡 등)를 별도 버튼으로 분리 —
+            // 실기기에서 공유가 조용히 다운로드로 대체되어 혼란스럽다는 제보에 따른 조치.
             itemExcelButtonHtml(type, id) {
-                return `<button onclick="SafetyModule.exportItemExcel('${type}', '${id}')" title="이 항목만 엑셀로 저장" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors">📊</button>`;
+                return `<button onclick="SafetyModule.exportItemExcel('${type}', '${id}')" title="이 항목만 엑셀로 저장" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors">📊</button>
+                <button onclick="SafetyModule.exportItemExcel('${type}', '${id}', 'share')" title="공유하기 (카카오톡 등)" class="px-2.5 py-1 bg-sky-600 hover:bg-sky-700 text-white font-bold rounded-lg transition-colors">📤</button>`;
             },
-            exportRiskItemExcel(id) {
+            exportRiskItemExcel(id, mode = 'download') {
                 const item = (State.safetyData.risk || []).find(i => i.id === id);
                 if (!item) { Toast.show('항목을 찾을 수 없습니다.', 'error'); return; }
                 const safeTitle = String(item.title || item.process || '위험성평가').replace(/[\\\/:?*\[\]]/g, ' ').trim().substring(0, 20) || '위험성평가';
                 this._downloadRiskWorkbook([item], `위험성평가_${safeTitle}_${item.date || todayStr}`, {
                     dateValue: item.date || todayStr, rightLabel: '작성자', rightValue: item.manager || '-'
-                });
+                }, mode);
             },
-            exportRiskListExcel() {
+            exportRiskListExcel(mode = 'download') {
                 const search = (document.getElementById('risk-search')?.value || '').toLowerCase();
                 const filterStatus = document.getElementById('risk-filter-status')?.value || 'all';
                 const items = (State.safetyData.risk || []).filter(item => {
@@ -9634,7 +9753,7 @@ ${continueFrom}
                 if (!items.length) { Toast.show('내보낼 위험성평가 항목이 없습니다. (검색/필터 조건을 확인해주세요)', 'error'); return; }
                 this._downloadRiskWorkbook(items, `위험성평가_목록_${todayStr}`, {
                     dateValue: todayStr, rightLabel: '총 건수', rightValue: `${items.length}건`
-                });
+                }, mode);
             },
 
             // ============================================================
@@ -9797,16 +9916,16 @@ ${continueFrom}
                 }
                 return wb;
             },
-            async exportAccidentReportExcel(id) {
+            async exportAccidentReportExcel(id, mode = 'download') {
                 const item = (State.safetyData.accident || []).find(i => String(i.id) === String(id));
                 if (!item) { Toast.show('항목을 찾을 수 없습니다.', 'error'); return; }
                 const safeTitle = String(item.victimName || '재해자').replace(/[\\\/:?*\[\]]/g, ' ').trim().substring(0, 20) || '재해자';
-                this._downloadWorkbook(() => this._buildAccidentReportWorkbook([item]), `산업재해조사표_${safeTitle}_${item.date || todayStr}`);
+                this._downloadWorkbook(() => this._buildAccidentReportWorkbook([item]), `산업재해조사표_${safeTitle}_${item.date || todayStr}`, mode);
             },
-            exportAccidentReportListExcel() {
+            exportAccidentReportListExcel(mode = 'download') {
                 const items = State.safetyData.accident || [];
                 if (!items.length) { Toast.show('등록된 재해기록이 없습니다.', 'error'); return; }
-                this._downloadWorkbook(() => this._buildAccidentReportWorkbook(items), `산업재해조사표_전체_${todayStr}`);
+                this._downloadWorkbook(() => this._buildAccidentReportWorkbook(items), `산업재해조사표_전체_${todayStr}`, mode);
             },
 
             // ===== 작업허가서(PTW) 공식 서식 엑셀 내보내기 =====
@@ -9982,20 +10101,20 @@ ${continueFrom}
                 }
                 return wb;
             },
-            async exportPtwItemExcel(id) {
+            async exportPtwItemExcel(id, mode = 'download') {
                 const item = (State.safetyData.ptw || []).find(i => String(i.id) === String(id));
                 if (!item) { Toast.show('항목을 찾을 수 없습니다.', 'error'); return; }
                 const safeTitle = String(item.title || '작업허가서').replace(/[\\\/:?*\[\]]/g, ' ').trim().substring(0, 30) || '작업허가서';
-                this._downloadWorkbook(() => this._buildPtwWorkbook([item]), `작업허가서_${safeTitle}_${item.date || todayStr}`);
+                this._downloadWorkbook(() => this._buildPtwWorkbook([item]), `작업허가서_${safeTitle}_${item.date || todayStr}`, mode);
             },
-            exportPtwListExcel() {
+            exportPtwListExcel(mode = 'download') {
                 const all = State.safetyData.ptw || [];
                 let items = all;
                 if (this.ptwFilter === 'open') items = all.filter(p => p.status !== '종료');
                 else if (this.ptwFilter === '종료') items = all.filter(p => p.status === '종료');
                 else if (this.ptwFilter === '승인대기') items = all.filter(p => p.status === '승인대기');
                 if (!items.length) { Toast.show('내보낼 작업허가서가 없습니다. (필터 조건을 확인해주세요)', 'error'); return; }
-                this._downloadWorkbook(() => this._buildPtwWorkbook(items), `작업허가서_전체_${todayStr}`);
+                this._downloadWorkbook(() => this._buildPtwWorkbook(items), `작업허가서_전체_${todayStr}`, mode);
             },
 
             // ===== TBM 일지(Tool Box Meeting) 공식 서식 엑셀 내보내기 =====
@@ -10149,16 +10268,16 @@ ${continueFrom}
                 }
                 return wb;
             },
-            async exportTbmItemExcel(id) {
+            async exportTbmItemExcel(id, mode = 'download') {
                 const item = (State.safetyData.tbm || []).find(i => String(i.id) === String(id));
                 if (!item) { Toast.show('항목을 찾을 수 없습니다.', 'error'); return; }
                 const safeTitle = String(item.topic || 'TBM일지').replace(/[\\\/:?*\[\]]/g, ' ').trim().substring(0, 30) || 'TBM일지';
-                this._downloadWorkbook(() => this._buildTbmWorkbook([item]), `TBM일지_${safeTitle}_${item.date || todayStr}`);
+                this._downloadWorkbook(() => this._buildTbmWorkbook([item]), `TBM일지_${safeTitle}_${item.date || todayStr}`, mode);
             },
-            exportTbmListExcel() {
+            exportTbmListExcel(mode = 'download') {
                 const items = State.safetyData.tbm || [];
                 if (!items.length) { Toast.show('내보낼 TBM일지가 없습니다.', 'error'); return; }
-                this._downloadWorkbook(() => this._buildTbmWorkbook(items), `TBM일지_전체_${todayStr}`);
+                this._downloadWorkbook(() => this._buildTbmWorkbook(items), `TBM일지_전체_${todayStr}`, mode);
             },
 
             // ===== 안전교육일지 공식 서식 엑셀 내보내기 =====
@@ -10305,16 +10424,16 @@ ${continueFrom}
                 }
                 return wb;
             },
-            async exportEduItemExcel(id) {
+            async exportEduItemExcel(id, mode = 'download') {
                 const item = (State.safetyData.edu || []).find(i => String(i.id) === String(id));
                 if (!item) { Toast.show('항목을 찾을 수 없습니다.', 'error'); return; }
                 const safeTitle = String(item.name || '안전교육일지').replace(/[\\\/:?*\[\]]/g, ' ').trim().substring(0, 30) || '안전교육일지';
-                this._downloadWorkbook(() => this._buildEduWorkbook([item]), `안전교육일지_${safeTitle}_${item.date || todayStr}`);
+                this._downloadWorkbook(() => this._buildEduWorkbook([item]), `안전교육일지_${safeTitle}_${item.date || todayStr}`, mode);
             },
-            exportEduListExcel() {
+            exportEduListExcel(mode = 'download') {
                 const items = State.safetyData.edu || [];
                 if (!items.length) { Toast.show('내보낼 안전교육일지가 없습니다.', 'error'); return; }
-                this._downloadWorkbook(() => this._buildEduWorkbook(items), `안전교육일지_전체_${todayStr}`);
+                this._downloadWorkbook(() => this._buildEduWorkbook(items), `안전교육일지_전체_${todayStr}`, mode);
             },
 
             // ===== 법정회의·점검(협의체/위원회/순회점검/합동점검) 엑셀 내보내기 (공식 서식, 첨부사진 포함) =====
@@ -10407,7 +10526,7 @@ ${continueFrom}
                 ws.pageSetup.printTitlesRow = '5:5';
                 return wb;
             },
-            exportLegalMeetExcel() {
+            exportLegalMeetExcel(mode = 'download') {
                 const searchEl = document.getElementById('legalmeet-search');
                 const kindEl = document.getElementById('legalmeet-filter-kind');
                 const q = (searchEl ? searchEl.value : '').trim().toLowerCase();
@@ -10422,7 +10541,8 @@ ${continueFrom}
                 const kindLabel = kindFilter === 'all' ? '전체' : kindFilter;
                 this._downloadWorkbook(
                     () => this._buildLegalMeetWorkbook(items, { dateValue: todayStr, rightLabel: '총 건수', rightValue: `${items.length}건 (${kindLabel})` }),
-                    `법정회의점검_${kindLabel}_${todayStr}`
+                    `법정회의점검_${kindLabel}_${todayStr}`,
+                    mode
                 );
             },
 
@@ -10839,6 +10959,10 @@ ${continueFrom}
                 WeatherWidget.refresh();
                 this.updateClock();
                 setInterval(() => this.updateClock(), 1000);
+                // v5.29: 시작 화면 설정 — 기본값(홈)이 아닐 때만 전환합니다(이미 renderTimeline()을
+                // 호출했으므로 불필요한 재작업 없이 전환).
+                const startTab = DisplayPrefs.getStartTab();
+                if (startTab !== 'timeline') this.switchTab(startTab);
             },
             updateClock() {
                 const now = new Date();
@@ -10969,7 +11093,7 @@ ${continueFrom}
             },
             renderTimeline() {
                 this.renderUrgentPanel();
-                this.renderTodayStatus();
+                this.renderQuickActions();
                 const strip = document.getElementById('weekly-strip');
                 const listEl = document.getElementById('task-list');
                 const monthYearEl = document.getElementById('calendar-month-year');
@@ -11478,9 +11602,9 @@ ${continueFrom}
                 if (result === 'shared') Toast.show('단일 HTML 파일을 공유했습니다.', 'success');
                 else if (result === 'downloaded') Toast.show('단일 HTML 파일이 다운로드되었습니다.', 'success');
             },
-            printReport() {
-                const dateStr = State.currentDate;
-
+            // printReport()와 shareReport()가 똑같이 필요로 하는 "오늘 하루 요약" 데이터를
+            // 한 곳에서만 만듭니다 (중복 로직을 두 벌 유지하면 한쪽만 고쳐져서 내용이 어긋납니다).
+            _getDayReportData(dateStr) {
                 // 타임라인 화면(renderTimeline)과 동일하게 '주기별 자동 업무'와 '사용자 등록 업무'를
                 // 합쳐야 합니다. 주기별 업무는 완료 체크를 하기 전까지 State.tasks에 저장되지 않고
                 // 화면에만 가상으로 표시되므로, 이 병합이 없으면 미완료 상태인 주기별 업무가
@@ -11490,10 +11614,16 @@ ${continueFrom}
                 const customIds = new Set(custom.map(t => t.id));
                 const dayTasks = [...periodic.filter(t => !customIds.has(t.id)), ...custom];
 
-                const doneTasks = dayTasks.filter(t => t.isCompleted);
-                const pendingTasks = dayTasks.filter(t => !t.isCompleted);
-                const dayReports = (State.reports || []).filter(r => r.date === dateStr);
-                const memo = (State.journal && State.journal[dateStr]) || '';
+                return {
+                    doneTasks: dayTasks.filter(t => t.isCompleted),
+                    pendingTasks: dayTasks.filter(t => !t.isCompleted),
+                    dayReports: (State.reports || []).filter(r => r.date === dateStr),
+                    memo: (State.journal && State.journal[dateStr]) || ''
+                };
+            },
+            printReport() {
+                const dateStr = State.currentDate;
+                const { doneTasks, pendingTasks, dayReports, memo } = this._getDayReportData(dateStr);
 
                 const esc = (s) => Utils.escapeHTML(String(s == null ? '' : s));
                 const rowsHTML = (list, emptyMsg, renderRow) => list.length
@@ -11558,6 +11688,45 @@ ${continueFrom}
                 printWin.document.open();
                 printWin.document.write(docHTML);
                 printWin.document.close();
+            },
+            // v5.29: 헤더의 🖨️ 인쇄 아이콘을 공유로 바꿔달라는 요청 — "모바일이라 인쇄가 어렵다"는
+            // 이유였습니다. 인쇄용 HTML 문서 전체를 공유하기보다(받는 사람이 파일을 열어야 함),
+            // 카카오톡 등에서 바로 읽을 수 있는 텍스트 요약을 만들어 Web Share API(텍스트 공유는
+            // 파일 공유보다 지원 범위가 넓음)로 공유합니다. 공유 미지원 환경에서는 클립보드 복사로
+            // 대체해 최소한 "붙여넣기"로는 전달할 수 있게 합니다. tab-safety/마이페이지의 인쇄
+            // 버튼은 이번 요청 대상이 아니라 그대로 둡니다.
+            async shareReport() {
+                const dateStr = State.currentDate;
+                const { doneTasks, pendingTasks, dayReports, memo } = this._getDayReportData(dateStr);
+
+                const lines = [`📋 안전관리 일지 - ${dateStr}`, ''];
+                lines.push(`✅ 완료 업무 ${doneTasks.length}건 / ⏳ 미완료 업무 ${pendingTasks.length}건`);
+                if (pendingTasks.length) {
+                    const names = pendingTasks.slice(0, 8).map(t => t.title).join(', ');
+                    lines.push(`- 미완료: ${names}${pendingTasks.length > 8 ? ` 등 ${pendingTasks.length}건` : ''}`);
+                }
+                lines.push(`⚠ 위험신고 접수 ${dayReports.length}건`);
+                if (dayReports.length) {
+                    lines.push('- ' + dayReports.slice(0, 5).map(r => `[${r.status || '접수'}] ${r.title}`).join(', '));
+                }
+                if (memo) lines.push(`📝 메모: ${memo}`);
+                const text = lines.join('\n');
+
+                if (navigator.share) {
+                    try {
+                        await navigator.share({ title: `안전관리 일지 - ${dateStr}`, text });
+                        return;
+                    } catch (e) {
+                        if (e && e.name === 'AbortError') return; // 사용자가 취소 - 조용히 종료
+                        // 그 외 실패는 아래 클립보드 복사로 대체
+                    }
+                }
+                try {
+                    await navigator.clipboard.writeText(text);
+                    Toast.show('이 브라우저에서는 공유가 지원되지 않아, 내용을 클립보드에 복사했습니다. 카카오톡 등에 붙여넣어 보내주세요.', 'success');
+                } catch (e) {
+                    Toast.show('공유를 지원하지 않는 환경입니다. 마이페이지의 "인쇄/PDF 저장" 기능을 이용해주세요.', 'error');
+                }
             },
             // v23: 사업장명(회사명) 설정 — 모든 모듈 엑셀 출력 상단 결재란에 표시됩니다.
             renderSiteInfo() {
@@ -11747,7 +11916,7 @@ ${continueFrom}
             //
             // key는 EXCEL_COLUMNS / EXCEL_SHEET_SPEC에 정의된 이름이어야 합니다.
             // ============================================================
-            async exportGeneralExcel(key, items, label) {
+            async exportGeneralExcel(key, items, label, mode = 'download') {
                 const cols = EXCEL_COLUMNS[key];
                 if (!items || !items.length) { Toast.show('내보낼 데이터가 없습니다.', 'warning'); return; }
                 if (!cols) { Toast.show('이 항목은 아직 엑셀 서식이 없습니다.', 'error'); return; }
@@ -11760,37 +11929,44 @@ ${continueFrom}
                     const wb = await SafetyModule._buildGenericWorkbook(key, items, cols);
                     const buffer = await wb.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const result = await Utils.deliverBlob(blob, `${label}_${todayStr}.xlsx`, blob.type);
-                    if (result === 'shared') Toast.show(`${label} 엑셀을 공유했습니다.`, 'success');
-                    else if (result === 'downloaded') Toast.show(`${label} ${items.length}건을 엑셀로 저장했습니다.`, 'success');
+                    if (mode === 'share') {
+                        const result = await Utils.shareBlob(blob, `${label}_${todayStr}.xlsx`, blob.type);
+                        if (result === 'shared') Toast.show(`${label} 엑셀을 공유했습니다.`, 'success');
+                    } else {
+                        Utils.downloadBlob(blob, `${label}_${todayStr}.xlsx`);
+                        Toast.show(`${label} ${items.length}건을 엑셀로 저장했습니다.`, 'success');
+                    }
                 } catch (err) {
                     console.error('[엑셀 출력 실패]', err);
                     Toast.show('엑셀을 만들지 못했습니다: ' + (err && err.message ? err.message : '알 수 없는 오류'), 'error');
                 }
             },
-            exportAuditLogExcel() {
-                this.exportGeneralExcel('auditLog', State.auditLog || [], '데이터 변경이력');
+            exportAuditLogExcel(mode = 'download') {
+                this.exportGeneralExcel('auditLog', State.auditLog || [], '데이터 변경이력', mode);
             },
             // 화면에서 검색·필터한 결과 그대로 내보냅니다 - 목록에 보이는 것과 엑셀이 다르면
             // 사용자가 혼란스럽기 때문입니다.
-            exportReportsExcel() {
+            exportReportsExcel(mode = 'download') {
                 const items = this._filteredReports ? this._filteredReports() : (State.reports || []);
-                this.exportGeneralExcel('reports', items, '현장 위험요인 신고');
+                this.exportGeneralExcel('reports', items, '현장 위험요인 신고', mode);
             },
-            exportChecklistExcel() {
+            exportChecklistExcel(mode = 'download') {
                 const items = this._filteredChecklist ? this._filteredChecklist() : (State.checklist || []);
-                this.exportGeneralExcel('checklist', items, '법정의무 이행점검표');
+                this.exportGeneralExcel('checklist', items, '법정의무 이행점검표', mode);
             },
-            exportTasksExcel() {
-                this.exportGeneralExcel('tasks', State.tasks || [], '안전보건 업무일지');
+            exportTasksExcel(mode = 'download') {
+                this.exportGeneralExcel('tasks', State.tasks || [], '안전보건 업무일지', mode);
             },
             openSearchModal() {
                 this.switchTab('safety');
                 SafetyModule.switchSubtab('search');
             },
             // 2026-09-12 추가: 상단 ⚙️ 아이콘 — "진짜 시스템 설정"(글자 크기 등)만 다루는 팝업.
+            // v5.29: "글자크기밖에 없다"는 피드백에 따라 시작 화면·저장공간 관리를 추가.
             openSystemSettingsModal() {
                 this.renderFontScaleOptions();
+                this.renderStartTabOptions();
+                this.renderStorageUsage();
                 Modal.open('modal-system-settings');
             },
             renderFontScaleOptions() {
@@ -11806,52 +11982,70 @@ ${continueFrom}
                 DisplayPrefs.set(key);
                 this.renderFontScaleOptions();
             },
-            // 2026-09-12 추가: 홈("오늘") 화면 상단 4칸 요약(즉시처리/기한초과/7일이내/반복위험)과
-            // 하단 바로가기 4개(위험발견/오늘점검/TBM/CAPA)에서 쓰는 스크롤 이동 도우미.
-            // 새로운 필터링 화면을 따로 만들지 않고, 이미 있는 "오늘 반드시 처리해야 할 업무"
-            // 패널(urgent-panel-wrap, getUrgentItems() 기반)로 바로 스크롤합니다 — 그 패널이
-            // 이미 즉시처리·기한초과·7일이내 항목을 전부 모아 보여주고 있어 중복 구현하지 않습니다.
-            scrollToUrgentPanel() {
-                const el = document.getElementById('urgent-panel-wrap');
-                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            // v5.29: 앱을 열 때 항상 홈(타임라인)부터 보여주던 것을, 예를 들어 안전모듈부터
+            // 바로 쓰는 사람이 매번 3번 탭을 누르지 않도록 시작 화면을 고를 수 있게 했습니다.
+            renderStartTabOptions() {
+                const el = document.getElementById('start-tab-options');
+                if (!el) return;
+                const current = DisplayPrefs.getStartTab();
+                const opts = [['timeline', '홈'], ['safety', '안전모듈'], ['dashboard', '대시보드'], ['reports', '위험신고']];
+                el.innerHTML = opts.map(([key, label]) => `
+                    <button onclick="Actions.setStartTab('${key}')" class="py-1.5 rounded-xl border font-bold transition-colors ${key === current ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}">${label}</button>
+                `).join('');
             },
-            scrollToTaskList() {
-                if (this.currentTab !== 'timeline') this.switchTab('timeline');
-                requestAnimationFrame(() => {
-                    const el = document.getElementById('task-list');
-                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            setStartTab(key) {
+                DisplayPrefs.setStartTab(key);
+                this.renderStartTabOptions();
+            },
+            // v5.29: 실제 사용 중인 저장공간을 보여주고, 앱 화면 캐시(Service Worker)만 지워서
+            // 새로고침하는 버튼 — 데이터(localStorage의 안전관리 데이터)는 건드리지 않습니다.
+            renderStorageUsage() {
+                const el = document.getElementById('storage-usage-info');
+                if (!el) return;
+                try {
+                    const dataBytes = Utils.calculateByteSize(localStorage.getItem(STORAGE_KEY) || '');
+                    el.textContent = `안전관리 데이터: ${Utils.formatBytes(dataBytes)} (기기 저장공간에 저장됨)`;
+                } catch (e) {
+                    el.textContent = '저장공간 정보를 확인할 수 없습니다.';
+                }
+            },
+            async clearAppCache() {
+                this.confirm('캐시 삭제', '앱 화면 파일 캐시를 지우고 새로고침합니다. 등록된 데이터는 지워지지 않습니다. 계속하시겠습니까?', async () => {
+                    try {
+                        if ('caches' in window) {
+                            const keys = await caches.keys();
+                            await Promise.all(keys.map(k => caches.delete(k)));
+                        }
+                        if ('serviceWorker' in navigator) {
+                            const regs = await navigator.serviceWorker.getRegistrations();
+                            await Promise.all(regs.map(r => r.unregister()));
+                        }
+                    } catch (e) {
+                        console.error('[캐시 삭제 실패]', e);
+                    }
+                    location.reload();
                 });
             },
-            // "오늘의 안전상태" 4칸 요약 — getUrgentItems()가 이미 계산한 bucket(overdue/today/soon)을
-            // 그대로 재사용하고(새 집계 로직을 따로 만들지 않음), 반복위험만 RepeatDetectionEngine을
-            // 위험성평가(title 기준)·아차사고(location 기준)에 각각 적용해 더합니다 — 이 두 기준은
-            // 이미 위험성평가/아차사고 목록 화면에서 반복 배지로 쓰이고 있는 것과 동일합니다.
-            renderTodayStatus() {
-                const el = document.getElementById('today-status-grid');
+            // v5.29: 홈 화면 상단 바로가기 — State.safetyMenuOrder(사용자가 "✏️ 순서 편집"으로
+            // 직접 정할 수 있는 실제 안전모듈 우선순위, 기본값 SAFETY_MENU_DEFAULT_ORDER) 맨
+            // 앞 5개를 그대로 가져와 씁니다. 순서를 새로 판단해서 하드코딩하지 않고 이미 있는
+            // 우선순위 데이터를 재사용하므로, 사용자가 메뉴 순서를 바꾸면 여기도 함께 바뀝니다.
+            QUICK_ACTION_STYLES: [
+                'bg-emerald-50 hover:bg-emerald-100 border-emerald-200 text-emerald-700',
+                'bg-amber-50 hover:bg-amber-100 border-amber-200 text-amber-700',
+                'bg-rose-50 hover:bg-rose-100 border-rose-200 text-rose-700',
+                'bg-sky-50 hover:bg-sky-100 border-sky-200 text-sky-700',
+                'bg-indigo-50 hover:bg-indigo-100 border-indigo-200 text-indigo-700'
+            ],
+            renderQuickActions() {
+                const el = document.getElementById('quick-actions-grid');
                 if (!el) return;
-                const urgent = this.getUrgentItems();
-                const overdue = urgent.filter(u => u.bucket === 'overdue').length;
-                const today = urgent.filter(u => u.bucket === 'today').length;
-                const soon = urgent.filter(u => u.bucket === 'soon').length;
-
-                const riskRepeatMap = RepeatDetectionEngine.countMap(State.safetyData.risk || [], 'title', 'date');
-                const nearmissRepeatMap = RepeatDetectionEngine.countMap(State.safetyData.nearmiss || [], 'location', 'date');
-                let repeatCount = 0;
-                riskRepeatMap.forEach(c => { if (RepeatDetectionEngine.isRepeat(c)) repeatCount++; });
-                nearmissRepeatMap.forEach(c => { if (RepeatDetectionEngine.isRepeat(c)) repeatCount++; });
-
-                const cells = [
-                    { emoji: '🔴', label: '즉시처리', count: today, style: 'bg-rose-50 border-rose-200 text-rose-700', onclick: "Actions.scrollToUrgentPanel()" },
-                    { emoji: '🟠', label: '기한초과', count: overdue, style: 'bg-orange-50 border-orange-200 text-orange-700', onclick: "Actions.scrollToUrgentPanel()" },
-                    { emoji: '🟡', label: '7일이내', count: soon, style: 'bg-amber-50 border-amber-200 text-amber-700', onclick: "Actions.scrollToUrgentPanel()" },
-                    { emoji: '🔁', label: '반복위험', count: repeatCount, style: 'bg-purple-50 border-purple-200 text-purple-700', onclick: "SafetyModule.goToSubtab('recurring')" }
-                ];
-                el.innerHTML = cells.map(c => `
-                    <div onclick="${c.onclick}" class="rounded-xl p-2 border cursor-pointer active:scale-95 transition-all ${c.style}">
-                        <div class="text-sm leading-none">${c.emoji}</div>
-                        <div class="text-base font-black leading-tight">${c.count}</div>
-                        <div class="text-[9px] font-bold leading-tight">${c.label}</div>
-                    </div>
+                const order = (State.safetyMenuOrder && State.safetyMenuOrder.length) ? State.safetyMenuOrder : SAFETY_MENU_DEFAULT_ORDER;
+                const top5 = order.map(key => SAFETY_MENU_ITEMS[key] ? { key, ...SAFETY_MENU_ITEMS[key] } : null).filter(Boolean).slice(0, 5);
+                el.innerHTML = top5.map((item, i) => `
+                    <button onclick="SafetyModule.goToSubtab('${item.key}')" class="flex flex-col items-center gap-1 py-2.5 border rounded-xl transition-colors active:scale-95 ${this.QUICK_ACTION_STYLES[i % this.QUICK_ACTION_STYLES.length]}">
+                        <span class="text-base leading-none">${item.emoji}</span><span class="text-[9px] font-bold truncate w-full text-center">${Utils.escapeHTML(item.label)}</span>
+                    </button>
                 `).join('');
             },
             // v14: 기존에는 여기서 "2026년 하반기 교육 일정 공지됨" 같은 고정 문구 2줄을
@@ -11966,7 +12160,7 @@ ${continueFrom}
                 Actions.init();
 
                 // v5.8: PWA 확장모듈 초기화 (PWA 확장모듈에서 이식)
-                VoiceInput.attach('report-desc'); // 유일한 정적 탭 내 필드 - 모달형 필드는 openModal()에서 매번 부착
+                VoiceInput.attach('report-desc', { showLangSelect: false }); // 위험신고는 언어선택 없이 한국어로 고정 (요청에 따라 단순화) - 모달형 필드는 openModal()에서 매번 부착
                 PWAInstall.init();
                 PWAInstall.registerServiceWorker();
                 checkSecureContext();
