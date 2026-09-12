@@ -224,6 +224,12 @@
                     <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2.5" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M15 17h5l-1.405-1.405A2.032 2.032 0 0118 14.158V11a6.002 6.002 0 00-4-5.659V5a2 2 0 10-4 0v.341C7.67 6.165 6 8.388 6 11v3.159c0 .538-.214 1.055-.595 1.436L4 17h5m6 0v1a3 3 0 11-6 0v-1m6 0H9"></path></svg>
                     <span id="unread-dot" class="absolute top-1.5 right-1.5 w-2 h-2 bg-rose-500 rounded-full ring-2 ring-slate-900 hidden animate-pulse"></span>
                 </button>
+                <!-- 2026-09-12 추가: 진짜 "시스템" 설정(글자 크기 등 화면 자체 설정)은 여기 톱니바퀴로,
+                     사업장정보·API키·백업 등 앱 이용 관련 설정은 하단 탭 "마이페이지"로 분리했습니다
+                     (사용자 요청). -->
+                <button onclick="Actions.openSystemSettingsModal()" class="p-2 text-slate-300 hover:text-white hover:bg-slate-800 rounded-full transition-colors" aria-label="시스템 설정">
+                    <svg class="w-4 h-4" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
+                </button>
             </div>
         </div>
 
@@ -243,6 +249,31 @@
             
             <!-- [TAB 1] Timeline / Schedule -->
             <section id="tab-timeline" class="space-y-3.5 fade-in">
+                <!-- 2026-09-12 추가: "오늘의 안전상태" 4칸 요약 + 자주 쓰는 업무 4개 바로가기.
+                     새 화면·새 데이터 집계를 만들지 않고, 이미 있는 getUrgentItems()/
+                     RepeatDetectionEngine 결과를 요약해서 화면 맨 위에서 5~10초 안에 파악할 수
+                     있게 보여주고, 아래 "오늘 반드시 처리해야 할 업무" 패널·반복위험요인 화면으로
+                     바로 연결합니다(사용자 요청 — 메인 화면에서 오늘 할 일을 바로 알 수 있게). -->
+                <div class="bg-white rounded-2xl p-3.5 border border-slate-200/80 shadow-xs space-y-2">
+                    <h3 class="text-xs font-bold text-slate-800">📍 오늘의 안전상태</h3>
+                    <div id="today-status-grid" class="grid grid-cols-4 gap-1.5 text-center"></div>
+                </div>
+
+                <div class="grid grid-cols-4 gap-2">
+                    <button onclick="Actions.switchTab('reports')" class="flex flex-col items-center gap-1 py-2.5 bg-rose-50 hover:bg-rose-100 border border-rose-200 rounded-xl transition-colors active:scale-95">
+                        <span class="text-base leading-none">🚨</span><span class="text-[9px] font-bold text-rose-700">위험발견</span>
+                    </button>
+                    <button onclick="Actions.scrollToTaskList()" class="flex flex-col items-center gap-1 py-2.5 bg-amber-50 hover:bg-amber-100 border border-amber-200 rounded-xl transition-colors active:scale-95">
+                        <span class="text-base leading-none">📋</span><span class="text-[9px] font-bold text-amber-700">오늘점검</span>
+                    </button>
+                    <button onclick="SafetyModule.goToSubtab('tbm')" class="flex flex-col items-center gap-1 py-2.5 bg-sky-50 hover:bg-sky-100 border border-sky-200 rounded-xl transition-colors active:scale-95">
+                        <span class="text-base leading-none">🗣️</span><span class="text-[9px] font-bold text-sky-700">TBM</span>
+                    </button>
+                    <button onclick="SafetyModule.goToSubtab('capa')" class="flex flex-col items-center gap-1 py-2.5 bg-emerald-50 hover:bg-emerald-100 border border-emerald-200 rounded-xl transition-colors active:scale-95">
+                        <span class="text-base leading-none">✅</span><span class="text-[9px] font-bold text-emerald-700">CAPA</span>
+                    </button>
+                </div>
+
                 <!-- 2026-08-30(출시단계 업그레이드): 날씨 경보. 체감온도 33도 이상/풍속 10m/s
                      이상일 때만 나타나고, 평소엔 숨겨져 있습니다. 화면 맨 위(긴급업무 패널보다도
                      위)에 둔 이유는 이게 실제 안전과 직결되는 경보라서입니다. -->
@@ -1071,7 +1102,10 @@
             <!-- [TAB 5] Settings & Data Management -->
             <section id="tab-settings" class="hidden space-y-3.5 fade-in">
                 <div class="bg-white rounded-2xl p-4 border border-slate-200/80 shadow-xs space-y-4">
-                    <h2 class="text-xs font-bold text-slate-800 border-b border-slate-100 pb-2">⚙️ 시스템 및 데이터 관리</h2>
+                    <div class="border-b border-slate-100 pb-2">
+                        <h2 class="text-xs font-bold text-slate-800">👤 마이페이지</h2>
+                        <p class="text-[11px] text-slate-400 mt-0.5">사업장 정보, API 키, 백업·복원 등 앱 이용 정보를 관리합니다. 글자 크기 등 화면 자체 설정은 상단 <b>⚙️</b> 아이콘에서 바꿀 수 있습니다.</p>
+                    </div>
 
                     <div class="space-y-2">
                         <h3 class="text-xs font-bold text-slate-700">🏢 사업장 정보</h3>
@@ -1168,7 +1202,7 @@
 
                     <div class="space-y-2">
                         <h3 class="text-xs font-bold text-slate-700">데이터 백업 및 복원 (JSON)</h3>
-                        <p class="text-[11px] text-slate-500 leading-tight">앱의 모든 데이터를 파일로 저장하거나 백업 파일에서 안전하게 복원합니다.</p>
+                        <p class="text-[11px] text-slate-500 leading-tight">앱의 모든 데이터를 파일로 저장하거나 백업 파일에서 안전하게 복원합니다. 이 화면과 각 모듈의 "📊 엑셀출력" 버튼은, 지원되는 기기에서는 다운로드 대신 카카오톡·이메일 등으로 바로 보낼 수 있는 공유 창이 먼저 열립니다.</p>
                         <div id="last-backup-indicator" class="text-[10px] text-slate-400"></div>
                         <div class="grid grid-cols-2 gap-2 pt-1">
                             <button onclick="Actions.exportBackupJSON()" class="py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1">
@@ -1220,7 +1254,7 @@
                 <div class="bg-slate-100 rounded-2xl p-3.5 border border-slate-200 text-[11px] text-slate-600 space-y-1">
                     <div class="font-bold text-slate-800">SAFE DUCKY (세이프더키)</div>
                     <div>본 시스템은 KOSHA 가이드라인, 산업안전보건법 및 중대재해처벌법을 준수합니다.</div>
-                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200 mt-2">v5.26 · © 2026 SAFE DUCKY</div>
+                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200 mt-2">v5.28 · © 2026 SAFE DUCKY</div>
                 </div>
             </section>
 
@@ -1244,9 +1278,12 @@
                 <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M11 3.055A9.001 9.001 0 1020.945 13H11V3.055z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M20.488 9H15V3.512A9.025 9.025 0 0120.488 9z"></path></svg>
                 <span class="text-[9px]">대시보드</span>
             </button>
+            <!-- 2026-09-12: 내부 탭 키('settings')와 switchTab() 로직은 그대로 두고 아이콘·라벨만
+                 "마이페이지"로 변경했습니다(사용자 요청 — 기존 설정 탭 내용이 대부분 사업장정보·
+                 API키·백업처럼 "마이페이지"에 어울리는 내용이라 내용은 유지, 표시만 변경). -->
             <button id="nav-settings" onclick="Actions.switchTab('settings')" class="flex flex-col items-center py-1 text-slate-400 hover:text-slate-600 font-semibold">
-                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M10.325 4.317c.426-1.756 2.924-1.756 3.35 0a1.724 1.724 0 002.573 1.066c1.543-.94 3.31.826 2.37 2.37a1.724 1.724 0 001.065 2.572c1.756.426 1.756 2.924 0 3.35a1.724 1.724 0 00-1.066 2.573c.94 1.543-.826 3.31-2.37 2.37a1.724 1.724 0 00-2.572 1.065c-.426 1.756-2.924 1.756-3.35 0a1.724 1.724 0 00-2.573-1.066c-1.543.94-3.31-.826-2.37-2.37a1.724 1.724 0 00-1.065-2.572c-1.756-.426-1.756-2.924 0-3.35a1.724 1.724 0 001.066-2.573c-.94-1.543.826-3.31 2.37-2.37.996.608 2.296.07 2.572-1.065z"></path><path stroke-linecap="round" stroke-linejoin="round" d="M15 12a3 3 0 11-6 0 3 3 0 016 0z"></path></svg>
-                <span class="text-[9px]">설정</span>
+                <svg class="w-5 h-5 mb-0.5" fill="none" stroke="currentColor" stroke-width="2" viewBox="0 0 24 24"><path stroke-linecap="round" stroke-linejoin="round" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path></svg>
+                <span class="text-[9px]">마이페이지</span>
             </button>
         </nav>
 
@@ -1366,6 +1403,23 @@
                         알림 모두 읽음 처리
                     </button>
                 </div>
+            </div>
+        </div>
+
+        <!-- 2026-09-12 추가: 상단 ⚙️ 아이콘용 "진짜 시스템 설정" 모달. 사업장정보·API키·백업 등
+             앱 이용 관련 설정(마이페이지 탭)과는 분리해, 화면 표시 자체에 관한 설정만 둡니다. -->
+        <div id="modal-system-settings" class="absolute inset-0 modal-backdrop flex items-end sm:items-center justify-center p-0 sm:p-4 hidden z-50">
+            <div class="bg-white w-full sm:max-w-xs rounded-t-3xl sm:rounded-2xl p-5 space-y-3 shadow-xl fade-in" onclick="event.stopPropagation()">
+                <div class="flex justify-between items-center border-b border-slate-100 pb-2">
+                    <h3 class="text-xs font-bold text-slate-800">⚙️ 시스템 설정</h3>
+                    <button onclick="Modal.close('modal-system-settings')" class="text-slate-400 hover:text-slate-700 text-sm font-bold p-1">✕</button>
+                </div>
+                <div class="space-y-1.5">
+                    <label class="text-[11px] font-bold text-slate-600">글자 크기</label>
+                    <div id="font-scale-options" class="grid grid-cols-3 gap-2 text-xs"></div>
+                    <p class="text-[10px] text-slate-400 leading-tight">안드로이드(Chrome·설치된 앱)에서 적용됩니다. iOS(Safari)는 이 기능을 지원하지 않아 화면에 반영되지 않을 수 있습니다.</p>
+                </div>
+                <p class="text-[10px] text-slate-400 leading-tight pt-2 border-t border-slate-100">사업장 정보·API 키·백업/복원·감사로그 등은 하단 <b>마이페이지</b> 탭에서 관리합니다.</p>
             </div>
         </div>
 
@@ -1765,7 +1819,7 @@
                 if (bytes < 1024) return bytes + ' B';
                 return (bytes / 1024).toFixed(1) + ' KB';
             },
-            exportCSV(filename, rows) {
+            async exportCSV(filename, rows) {
                 if (!rows || !rows.length) {
                     Toast.show('내보낼 데이터가 없습니다.', 'error');
                     return;
@@ -1788,14 +1842,54 @@
                     }).join('\n');
 
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
-                const link = document.createElement('a');
+                const result = await this.deliverBlob(blob, `${filename}.csv`, 'text/csv;charset=utf-8;');
+                if (result === 'shared') Toast.show(`${filename}.csv 공유 창을 열었습니다.`, 'success');
+                else if (result === 'downloaded') Toast.show(`${filename}.csv 내보내기 완료!`, 'success');
+            },
+            // ============================================================
+            // deliverBlob — 파일을 "공유" 또는 "다운로드"로 전달 (2026-09-12 추가)
+            // ------------------------------------------------------------
+            // 배경: 이 앱은 서버·동기화가 없는 기기 전용 오프라인 앱이라, 지금까지 엑셀·백업 등
+            // 모든 내보내기가 휴대폰의 "다운로드" 폴더에 파일을 떨어뜨리는 방식뿐이었습니다.
+            // 사용자가 "엑셀 파일을 받은 뒤 옮기는 게 번거롭고 휴대폰 용량도 차지한다"고 지적함에
+            // 따라, 브라우저가 지원하면 파일 탐색기를 거치지 않고 바로 카카오톡·이메일·드라이브
+            // 등으로 보낼 수 있는 Web Share API(공유 시트)를 우선 시도하도록 바꿨습니다.
+            //
+            // 동작: navigator.canShare({files})를 지원하는 환경(안드로이드 Chrome/설치앱, iOS
+            // Safari 15+)에서는 공유 시트를 띄웁니다 — 이 시트 안에도 보통 "기기에 저장"이 있어
+            // 다운로드가 필요한 경우도 그대로 커버합니다. 지원하지 않는 환경(데스크톱 브라우저 등)
+            // 에서는 지금까지와 완전히 동일한 다운로드 방식으로 자동 대체(fallback)되므로 기존
+            // 동작이 깨지는 곳은 없습니다. 사용자가 공유 시트에서 "취소"를 누른 경우는 오류가
+            // 아니라 정상적인 취소이므로, 그 뒤에 갑자기 다운로드가 따라오면 오히려 당황스러워
+            // 아무 것도 하지 않고 조용히 끝냅니다.
+            //
+            // 반환값: 'shared' | 'downloaded' | 'cancelled' — 호출한 쪽이 이 값으로 성공 문구를
+            // "공유했습니다" / "다운로드되었습니다" 중 실제 있었던 일에 맞게 고를 수 있습니다
+            // (실제로 하지 않은 것을 했다고 말하지 않기 위함).
+            // ============================================================
+            async deliverBlob(blob, filename, mimeType) {
+                let file = null;
+                try { file = new File([blob], filename, { type: mimeType || blob.type }); } catch (e) { file = null; }
+
+                if (file && navigator.canShare && navigator.canShare({ files: [file] })) {
+                    try {
+                        await navigator.share({ files: [file] });
+                        return 'shared';
+                    } catch (e) {
+                        if (e && e.name === 'AbortError') return 'cancelled';
+                        // 그 외 오류(공유 대상 앱 실행 실패 등)는 아래 다운로드로 대체합니다.
+                    }
+                }
+
                 const url = URL.createObjectURL(blob);
-                link.setAttribute('href', url);
-                link.setAttribute('download', `${filename}.csv`);
+                const link = document.createElement('a');
+                link.href = url;
+                link.download = filename;
                 document.body.appendChild(link);
                 link.click();
                 document.body.removeChild(link);
-                Toast.show(`${filename}.csv 내보내기 완료!`, 'success');
+                setTimeout(() => URL.revokeObjectURL(url), 1000);
+                return 'downloaded';
             },
             // sheets: [{ name, header:[..], rows:[[..],[..]], widths:[..] }] - 실제 .xlsx 파일로 내보내기 (SheetJS)
             exportExcelFile(filename, sheets) {
@@ -3086,7 +3180,47 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
         // 규칙: 여기 등록되는 모든 migration 함수는 "필드 추가"만 하며,
         // 기존 필드 값은 절대 덮어쓰거나 삭제하지 않는다.
         // ============================================================
-        const DB_VERSION = 35; // v35: 2026-09-12 사용자가 위험성평가 엑셀 스크린샷을 보내며 지적한 2건
+        const DB_VERSION = 37; // v37: 2026-09-12 사용자가 "오프라인 전용 구조로 바뀌면서 엑셀 파일을
+        // 휴대폰으로 받은 뒤 카카오톡 등으로 옮기는 게 번거롭고 휴대폰 용량도 차지한다"고 지적 →
+        // 모든 엑셀·백업(JSON)·단일HTML 내보내기가 파일을 "다운로드" 폴더에 떨어뜨리기만 하던
+        // 것을, 브라우저가 지원하면(Web Share API, navigator.canShare({files})) 파일 탐색기를
+        // 거치지 않고 바로 카카오톡·이메일·드라이브 등으로 보낼 수 있는 공유 시트를 먼저 띄우도록
+        // 개선. 지원하지 않는 환경(데스크톱 등)에서는 지금까지와 동일하게 다운로드로 자동
+        // 대체(fallback)되어 기존 동작은 그대로 유지됨. 공유 시트에서 사용자가 취소한 경우
+        // (AbortError)는 실제로 아무 것도 저장되지 않았을 수 있으므로 다운로드로 대체하지 않고
+        // 조용히 종료하며, 백업(exportBackupJSON)의 "마지막 백업 시각"도 취소 시에는 갱신하지
+        // 않음(하지 않은 백업을 했다고 기록하지 않기 위함). 공용 함수 Utils.deliverBlob() 하나로
+        // 만들어 기존에 9곳에 거의 동일하게 중복돼 있던 "Blob 생성→다운로드" 코드를 통합
+        // (_downloadWorkbook·_downloadRiskWorkbook·exportExcel·exportItemExcel·exportGeneralExcel·
+        // exportCSV·exportBackupJSON·exportSingleHTML) — 이 8개 함수가 커버하는 위험성평가·MSDS·
+        // PTW·TBM·교육·법정회의점검·사고조사표·주간일지·위험신고·법정의무점검표·감사로그·업무일지 등
+        // 사실상 앱의 모든 엑셀출력 버튼과 백업/단일HTML 내보내기 버튼에 한 번에 적용됨. 이 세션의
+        // 샌드박스에는 실제 안드로이드/iOS 기기가 없어 실기기에서 공유 시트가 실제로 뜨는 것까지는
+        // 확인하지 못했고, navigator.share/canShare를 코드로 흉내(mock)낸 자동화 테스트로 4가지 분기
+        // (공유성공/공유미지원/공유취소/공유실패)의 분기 처리만 검증함 — 실기기 확인 필요(대화창에
+        // 명시). 공유를 지원하지 않는 환경에서는 지금까지와 동일한 다운로드로 자동 대체(fallback)됨.
+        // 데이터 구조 변경 없음(파일 전달 방식만 개선, safetyData·STORAGE_KEY 필드는 무변경).
+        // v36: 2026-09-12 대규모 UX 개편 요청서(전권 위임)에 따라, 실제 코드
+        // 근거가 확인되고 이 앱의 "서버 없음·로그인 없음·기기 전용 저장" 원칙과 충돌하지 않는
+        // 항목만 골라 반영. ① 하단 탭 "설정"을 "마이페이지"로 변경(아이콘·라벨만 변경, 내부 탭
+        // 키('settings')·switchTab() 로직은 그대로 유지 — 이미 그 안의 사업장정보·API키·백업 등이
+        // 요청하신 "마이페이지" 성격이라 내용은 그대로 둠). ② 상단 헤더에 ⚙️ 아이콘 신설 — 글자
+        // 크기 조절 등 "화면 자체에 관한 진짜 시스템 설정"만 여기서 분리 관리(DisplayPrefs, 별도
+        // localStorage 키 사용 — 안전관리 데이터와 분리되어 백업/복원 대상이 아니며 마이그레이션과
+        // 무관). 글자 크기는 #app-root에 CSS zoom을 적용하는 방식이라 크로미움 계열(안드로이드
+        // Chrome·설치앱)에서만 실제로 반영되고 iOS Safari는 지원하지 않음 — 설정 화면에 그대로
+        // 안내함. ③ 홈("오늘") 화면 맨 위에 "오늘의 안전상태" 4칸 요약(🔴즉시처리/🟠기한초과/
+        // 🟡7일이내/🔁반복위험)과 자주 쓰는 업무 4개 바로가기(🚨위험발견/📋오늘점검/🗣TBM/✅CAPA)를
+        // 추가 — 새 집계 로직을 만들지 않고 기존 getUrgentItems()·RepeatDetectionEngine 결과를
+        // 그대로 재사용해 요약만 얹었고, 탭하면 기존 "오늘 반드시 처리해야 할 업무" 패널·반복위험
+        // 요인 화면으로 이동(중복 화면 없음). 요청서의 나머지 항목(CAPA 다단계 승인·검증 워크플로우
+        // 재도입, 작업자/안전관리자 계정·권한 분리, 로그인 화면, IndexedDB 이전, 코드 파일 분리 등)은
+        // v21(CAPA 3단계 단순화 — "1인 사용 앱에서 본인이 본인에게 결재하는 구조가 무의미")·v22
+        // 무렵(로그인 화면 = 서버 없이는 가짜 인증이 되어 스플래시로 대체) 이미 검토·결정된 이 앱의
+        // 핵심 아키텍처와 정면 충돌하거나, 검증 없이 되돌리면 회귀 위험이 큰 대규모 변경이라 이번
+        // 세션에서는 구현하지 않고 대화창 보고에서 사유와 대안을 설명함. 데이터 구조 변경 없음(화면·
+        // 신규 표시설정 키만 추가, 기존 safetyData·STORAGE_KEY 필드는 전혀 손대지 않음).
+        // v35: 2026-09-12 사용자가 위험성평가 엑셀 스크린샷을 보내며 지적한 2건
         // 수정. ① 위험성평가 엑셀 상단이 "사업장명" 단독 줄 + "평가일자·작성자" 줄로 2줄이었는데,
         // 작성자 값 뒤에 남는 병합 셀 여백이 화면에서 빈 칸처럼 보여 "빈칸에 어울릴만한거 하나
         // 넣는 형식으로 바꿔달라"는 요청을 받음 → 두 줄을 한 줄로 합쳐 평가일자·작성자(또는 목록
@@ -4018,6 +4152,43 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
             close(modalId) {
                 const el = document.getElementById(modalId);
                 if (el) el.classList.add('hidden');
+            }
+        };
+
+        // ============================================================
+        // DisplayPrefs — 화면 표시 설정("진짜 시스템 설정", 2026-09-12 추가)
+        // ------------------------------------------------------------
+        // 사용자가 하단 "설정" 탭을 사업장정보·API키·백업을 모아둔 "마이페이지"로 바꾸고,
+        // 글자 크기처럼 화면 자체에 관한 설정만 상단 ⚙️ 아이콘의 별도 팝업으로 분리해달라고
+        // 요청함에 따라 신설. 안전관리 "데이터"(STORAGE_KEY)와는 완전히 분리된 별도의 작은
+        // localStorage 키에 저장하므로 백업/복원 파일에도 포함되지 않고(기기별 화면 설정일
+        // 뿐 안전관리 데이터가 아님), DB_VERSION 마이그레이션과도 무관합니다.
+        // 동작 원리: 화면 전체에 text-[11px]처럼 rem이 아닌 절대 px 단위가 많이 섞여 있어
+        // 폰트 크기만 부분적으로 늘리면 일부만 커져 오히려 더 어색해집니다. 그래서 앱 전체를
+        // 감싸는 #app-root 컨테이너에 CSS zoom을 적용해 글자·아이콘·버튼·여백을 통째로 함께
+        // 확대/축소합니다. zoom은 크로미움 계열(안드로이드 Chrome, WebView 기반 설치앱)에서는
+        // 정상 동작하지만 iOS Safari는 지원하지 않아 그 환경에서는 반영되지 않습니다 — 실제
+        // 동작하지 않는 환경이 있다는 점을 설정 화면에도 그대로 안내합니다(요청서 전체의
+        // "실제로 안 되는 것을 된다고 하지 않는다" 원칙).
+        // ============================================================
+        const DisplayPrefs = {
+            KEY: 'safeducky_display_prefs',
+            SCALES: { sm: 0.92, md: 1, lg: 1.15 },
+            get() {
+                try {
+                    const raw = JSON.parse(localStorage.getItem(this.KEY) || '{}');
+                    return this.SCALES[raw.fontScale] ? raw.fontScale : 'md';
+                } catch (e) { return 'md'; }
+            },
+            set(key) {
+                if (!this.SCALES[key]) return;
+                try { localStorage.setItem(this.KEY, JSON.stringify({ fontScale: key })); } catch (e) {}
+                this.apply();
+            },
+            apply() {
+                const root = document.getElementById('app-root');
+                if (!root) return;
+                root.style.zoom = String(this.SCALES[this.get()]);
             }
         };
 
@@ -8640,15 +8811,9 @@ ${continueFrom}
                     const wb = await this._buildGenericWorkbook(type, rows, cols);
                     const buffer = await wb.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `${label}_${todayStr}.xlsx`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    Toast.show(`${label} ${rows.length}건을 엑셀로 저장했습니다. (엑셀에서 수정 후 출력하실 수 있습니다)`, 'success');
+                    const result = await Utils.deliverBlob(blob, `${label}_${todayStr}.xlsx`, blob.type);
+                    if (result === 'shared') Toast.show(`${label} 엑셀을 공유했습니다.`, 'success');
+                    else if (result === 'downloaded') Toast.show(`${label} ${rows.length}건을 엑셀로 저장했습니다. (엑셀에서 수정 후 출력하실 수 있습니다)`, 'success');
                 } catch (err) {
                     console.error('[엑셀 출력 실패]', err);
                     Toast.show('엑셀을 만들지 못했습니다: ' + (err && err.message ? err.message : '알 수 없는 오류'), 'error');
@@ -9202,15 +9367,9 @@ ${continueFrom}
                     const wb = await buildFn();
                     const buffer = await wb.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `${filename}.xlsx`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    Toast.show(`${filename}.xlsx 내보내기 완료! (엑셀에서 자유롭게 수정 후 출력하실 수 있습니다)`, 'success');
+                    const result = await Utils.deliverBlob(blob, `${filename}.xlsx`, blob.type);
+                    if (result === 'shared') Toast.show(`${filename}.xlsx 공유 창을 열었습니다.`, 'success');
+                    else if (result === 'downloaded') Toast.show(`${filename}.xlsx 내보내기 완료! (엑셀에서 자유롭게 수정 후 출력하실 수 있습니다)`, 'success');
                 } catch (e) {
                     console.error('엑셀 생성 실패', e);
                     Toast.show('엑셀 파일 생성 중 오류가 발생했습니다.', 'error');
@@ -9399,15 +9558,9 @@ ${continueFrom}
                     const wb = await this._buildRiskWorkbook(items, headerInfo);
                     const buffer = await wb.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `${filename}.xlsx`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    Toast.show(`${filename}.xlsx 내보내기 완료! (엑셀에서 자유롭게 수정 후 출력하실 수 있습니다)`, 'success');
+                    const result = await Utils.deliverBlob(blob, `${filename}.xlsx`, blob.type);
+                    if (result === 'shared') Toast.show(`${filename}.xlsx 공유 창을 열었습니다.`, 'success');
+                    else if (result === 'downloaded') Toast.show(`${filename}.xlsx 내보내기 완료! (엑셀에서 자유롭게 수정 후 출력하실 수 있습니다)`, 'success');
                 } catch (e) {
                     console.error('위험성평가 엑셀 생성 실패', e);
                     Toast.show('엑셀 파일 생성 중 오류가 발생했습니다.', 'error');
@@ -9448,15 +9601,10 @@ ${continueFrom}
                     // 파일명에 쓸 수 없는 문자를 걸러냅니다.
                     const name = String(item.title || item.name || item.topic || item.companyName || item.itemType || item.role || item.victimName || label)
                         .replace(/[\\\/:?*\[\]"<>|]/g, ' ').trim().slice(0, 40) || label;
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `${label}_${name}_${item.date || item.issueDate || item.appointDate || todayStr}.xlsx`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    Toast.show('엑셀로 저장했습니다.', 'success');
+                    const filename = `${label}_${name}_${item.date || item.issueDate || item.appointDate || todayStr}.xlsx`;
+                    const result = await Utils.deliverBlob(blob, filename, blob.type);
+                    if (result === 'shared') Toast.show('엑셀을 공유했습니다.', 'success');
+                    else if (result === 'downloaded') Toast.show('엑셀로 저장했습니다.', 'success');
                 } catch (err) {
                     console.error('[건별 엑셀 출력 실패]', err);
                     Toast.show('엑셀을 만들지 못했습니다: ' + (err && err.message ? err.message : '알 수 없는 오류'), 'error');
@@ -10678,6 +10826,7 @@ ${continueFrom}
                 else if (tabId === 'settings') { this.renderSiteInfo(); this.renderAIKeyStatus(); this.renderWeatherKeyStatus(); this.renderAuditLogPanel(); this.renderLastBackupIndicator(); this.renderBackupWarningBanner(); }
             },
             init() {
+                DisplayPrefs.apply();
                 StorageEngine.load();
                 this.renderTimeline();
                 this.renderReports();
@@ -10820,6 +10969,7 @@ ${continueFrom}
             },
             renderTimeline() {
                 this.renderUrgentPanel();
+                this.renderTodayStatus();
                 const strip = document.getElementById('weekly-strip');
                 const listEl = document.getElementById('task-list');
                 const monthYearEl = document.getElementById('calendar-month-year');
@@ -11236,7 +11386,7 @@ ${continueFrom}
                     this.renderChecklist();
                 });
             },
-            exportBackupJSON() {
+            async exportBackupJSON() {
                 // v14: weeklyLogMeta·weeklyLogNotes가 기존에는 여기 빠져 있었습니다 — localStorage
                 // 자동저장(StorageEngine.save)에는 포함되지만 "백업 다운로드" 파일에는 없어서,
                 // 백업 복원 시 주간일지 작성자·부서 설정과 저장해둔 주간 메모가 사라지는 문제가
@@ -11258,14 +11408,17 @@ ${continueFrom}
                     emergencyProcedureNote: State.emergencyProcedureNote
                 };
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `safety_meerkat_backup_${todayStr}.json`;
-                link.click();
-                localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString());
-                this.renderLastBackupIndicator();
-                this.renderBackupWarningBanner();
-                Toast.show('백업 파일이 다운로드되었습니다.', 'success');
+                const result = await Utils.deliverBlob(blob, `safety_meerkat_backup_${todayStr}.json`, 'application/json');
+                // 공유 시트를 열었다가 사용자가 취소한 경우("cancelled")는 실제로는 파일이 어디에도
+                // 저장되지 않았을 수 있으므로, 그 경우에는 "백업 완료" 시각을 갱신하지 않습니다
+                // (하지 않은 백업을 했다고 기록하지 않기 위함).
+                if (result === 'shared' || result === 'downloaded') {
+                    localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString());
+                    this.renderLastBackupIndicator();
+                    this.renderBackupWarningBanner();
+                }
+                if (result === 'shared') Toast.show('백업 파일을 공유했습니다. (카카오톡 "나에게 보내기", 클라우드 등에 저장해두세요)', 'success');
+                else if (result === 'downloaded') Toast.show('백업 파일이 다운로드되었습니다.', 'success');
             },
             importBackupJSON(e) {
                 const file = e.target.files[0];
@@ -11318,14 +11471,12 @@ ${continueFrom}
                 };
                 reader.readAsText(file);
             },
-            exportSingleHTML() {
+            async exportSingleHTML() {
                 const htmlContent = document.documentElement.outerHTML;
                 const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = `safety_meerkat_pro_standalone_${todayStr}.html`;
-                link.click();
-                Toast.show('단일 HTML 파일이 다운로드되었습니다.', 'success');
+                const result = await Utils.deliverBlob(blob, `safety_meerkat_pro_standalone_${todayStr}.html`, 'text/html');
+                if (result === 'shared') Toast.show('단일 HTML 파일을 공유했습니다.', 'success');
+                else if (result === 'downloaded') Toast.show('단일 HTML 파일이 다운로드되었습니다.', 'success');
             },
             printReport() {
                 const dateStr = State.currentDate;
@@ -11609,15 +11760,9 @@ ${continueFrom}
                     const wb = await SafetyModule._buildGenericWorkbook(key, items, cols);
                     const buffer = await wb.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
-                    const url = URL.createObjectURL(blob);
-                    const link = document.createElement('a');
-                    link.href = url;
-                    link.download = `${label}_${todayStr}.xlsx`;
-                    document.body.appendChild(link);
-                    link.click();
-                    document.body.removeChild(link);
-                    setTimeout(() => URL.revokeObjectURL(url), 1000);
-                    Toast.show(`${label} ${items.length}건을 엑셀로 저장했습니다.`, 'success');
+                    const result = await Utils.deliverBlob(blob, `${label}_${todayStr}.xlsx`, blob.type);
+                    if (result === 'shared') Toast.show(`${label} 엑셀을 공유했습니다.`, 'success');
+                    else if (result === 'downloaded') Toast.show(`${label} ${items.length}건을 엑셀로 저장했습니다.`, 'success');
                 } catch (err) {
                     console.error('[엑셀 출력 실패]', err);
                     Toast.show('엑셀을 만들지 못했습니다: ' + (err && err.message ? err.message : '알 수 없는 오류'), 'error');
@@ -11642,6 +11787,72 @@ ${continueFrom}
             openSearchModal() {
                 this.switchTab('safety');
                 SafetyModule.switchSubtab('search');
+            },
+            // 2026-09-12 추가: 상단 ⚙️ 아이콘 — "진짜 시스템 설정"(글자 크기 등)만 다루는 팝업.
+            openSystemSettingsModal() {
+                this.renderFontScaleOptions();
+                Modal.open('modal-system-settings');
+            },
+            renderFontScaleOptions() {
+                const el = document.getElementById('font-scale-options');
+                if (!el) return;
+                const current = DisplayPrefs.get();
+                const opts = [['sm', '작게'], ['md', '보통'], ['lg', '크게']];
+                el.innerHTML = opts.map(([key, label]) => `
+                    <button onclick="Actions.setFontScale('${key}')" class="py-2 rounded-xl border font-bold transition-colors ${key === current ? 'bg-slate-900 text-white border-slate-900' : 'bg-slate-50 text-slate-600 border-slate-200 hover:bg-slate-100'}">${label}</button>
+                `).join('');
+            },
+            setFontScale(key) {
+                DisplayPrefs.set(key);
+                this.renderFontScaleOptions();
+            },
+            // 2026-09-12 추가: 홈("오늘") 화면 상단 4칸 요약(즉시처리/기한초과/7일이내/반복위험)과
+            // 하단 바로가기 4개(위험발견/오늘점검/TBM/CAPA)에서 쓰는 스크롤 이동 도우미.
+            // 새로운 필터링 화면을 따로 만들지 않고, 이미 있는 "오늘 반드시 처리해야 할 업무"
+            // 패널(urgent-panel-wrap, getUrgentItems() 기반)로 바로 스크롤합니다 — 그 패널이
+            // 이미 즉시처리·기한초과·7일이내 항목을 전부 모아 보여주고 있어 중복 구현하지 않습니다.
+            scrollToUrgentPanel() {
+                const el = document.getElementById('urgent-panel-wrap');
+                if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+            },
+            scrollToTaskList() {
+                if (this.currentTab !== 'timeline') this.switchTab('timeline');
+                requestAnimationFrame(() => {
+                    const el = document.getElementById('task-list');
+                    if (el) el.scrollIntoView({ behavior: 'smooth', block: 'start' });
+                });
+            },
+            // "오늘의 안전상태" 4칸 요약 — getUrgentItems()가 이미 계산한 bucket(overdue/today/soon)을
+            // 그대로 재사용하고(새 집계 로직을 따로 만들지 않음), 반복위험만 RepeatDetectionEngine을
+            // 위험성평가(title 기준)·아차사고(location 기준)에 각각 적용해 더합니다 — 이 두 기준은
+            // 이미 위험성평가/아차사고 목록 화면에서 반복 배지로 쓰이고 있는 것과 동일합니다.
+            renderTodayStatus() {
+                const el = document.getElementById('today-status-grid');
+                if (!el) return;
+                const urgent = this.getUrgentItems();
+                const overdue = urgent.filter(u => u.bucket === 'overdue').length;
+                const today = urgent.filter(u => u.bucket === 'today').length;
+                const soon = urgent.filter(u => u.bucket === 'soon').length;
+
+                const riskRepeatMap = RepeatDetectionEngine.countMap(State.safetyData.risk || [], 'title', 'date');
+                const nearmissRepeatMap = RepeatDetectionEngine.countMap(State.safetyData.nearmiss || [], 'location', 'date');
+                let repeatCount = 0;
+                riskRepeatMap.forEach(c => { if (RepeatDetectionEngine.isRepeat(c)) repeatCount++; });
+                nearmissRepeatMap.forEach(c => { if (RepeatDetectionEngine.isRepeat(c)) repeatCount++; });
+
+                const cells = [
+                    { emoji: '🔴', label: '즉시처리', count: today, style: 'bg-rose-50 border-rose-200 text-rose-700', onclick: "Actions.scrollToUrgentPanel()" },
+                    { emoji: '🟠', label: '기한초과', count: overdue, style: 'bg-orange-50 border-orange-200 text-orange-700', onclick: "Actions.scrollToUrgentPanel()" },
+                    { emoji: '🟡', label: '7일이내', count: soon, style: 'bg-amber-50 border-amber-200 text-amber-700', onclick: "Actions.scrollToUrgentPanel()" },
+                    { emoji: '🔁', label: '반복위험', count: repeatCount, style: 'bg-purple-50 border-purple-200 text-purple-700', onclick: "SafetyModule.goToSubtab('recurring')" }
+                ];
+                el.innerHTML = cells.map(c => `
+                    <div onclick="${c.onclick}" class="rounded-xl p-2 border cursor-pointer active:scale-95 transition-all ${c.style}">
+                        <div class="text-sm leading-none">${c.emoji}</div>
+                        <div class="text-base font-black leading-tight">${c.count}</div>
+                        <div class="text-[9px] font-bold leading-tight">${c.label}</div>
+                    </div>
+                `).join('');
             },
             // v14: 기존에는 여기서 "2026년 하반기 교육 일정 공지됨" 같은 고정 문구 2줄을
             // 무조건 보여줬습니다(실제 데이터와 무관). 요청서 104번이 명확히 금지하는
