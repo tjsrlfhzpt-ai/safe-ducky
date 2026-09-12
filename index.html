@@ -12,8 +12,6 @@
     <!-- Tailwind CSS CDN -->
     <script src="https://cdn.tailwindcss.com"></script>
     <script src="https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js"></script>
-    <!-- 2026-08-30: PTW 인쇄물에 진위확인 QR코드를 넣기 위한 라이브러리 (davidshimjs/qrcodejs) -->
-    <script src="https://cdn.jsdelivr.net/npm/qrcodejs@1.0.0/qrcode.min.js"></script>
     <!-- ExcelJS: 위험성평가 공식 서식(색상/테두리/병합) 엑셀 출력 전용. 일반 목록 내보내기는 계속 SheetJS(XLSX)를 사용합니다. -->
     <script src="https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js"></script>
     <!-- Pretendard Font CDN -->
@@ -211,7 +209,6 @@
                 <div>
                     <h1 class="text-sm font-bold tracking-tight text-slate-100 flex items-center gap-1.5">
                         SAFE DUCKY
-                        <span class="text-[9px] bg-amber-500/20 text-amber-300 border border-amber-500/30 px-1 py-0.2 rounded font-mono">v5.23 · 세더키 브랜드 적용(스플래시·아이콘·빈화면 일러스트)</span>
                     </h1>
                     <p class="text-[11px] text-slate-400 mt-0.5">안전한 오늘, 더 좋은 내일</p>
                 </div>
@@ -361,7 +358,7 @@
                         <div class="grid grid-cols-2 gap-2">
                             <div>
                                 <label class="text-[11px] font-bold text-slate-600 block mb-1">현장 사진 첨부</label>
-                                <input type="file" id="report-photo-input" accept="image/*" capture="environment" onchange="Actions.handlePhotoSelect(event)" class="hidden">
+                                <input type="file" id="report-photo-input" accept="image/*" onchange="Actions.handlePhotoSelect(event)" class="hidden">
                                 <button type="button" onclick="document.getElementById('report-photo-input').click()" class="w-full py-2 px-2 border border-dashed border-slate-300 rounded-xl bg-slate-50 hover:bg-slate-100 text-[11px] font-semibold text-slate-600 flex items-center justify-center gap-1 transition-colors">
                                     📷 <span id="photo-btn-text">사진 선택</span>
                                 </button>
@@ -786,7 +783,7 @@
                     <div class="bg-gradient-to-br from-indigo-900 to-slate-900 text-white rounded-2xl p-4 shadow-sm space-y-2 border border-indigo-500/30">
                         <div class="flex justify-between items-center">
                             <span class="text-xs font-bold text-indigo-300 flex items-center gap-1">
-                                🤖 AI Safety Engine v4.5
+                                🤖 AI Safety Engine
                             </span>
                             <span class="text-[9px] bg-indigo-500/30 text-indigo-200 px-2 py-0.5 rounded-full border border-indigo-400/30">Gemini 연동</span>
                         </div>
@@ -1221,9 +1218,9 @@
                 </div>
 
                 <div class="bg-slate-100 rounded-2xl p-3.5 border border-slate-200 text-[11px] text-slate-600 space-y-1">
-                    <div class="font-bold text-slate-800">스마트 안전관리 시스템 Pro (Enterprise v4.7 · Core 엔진 강화)</div>
+                    <div class="font-bold text-slate-800">SAFE DUCKY (세이프더키)</div>
                     <div>본 시스템은 KOSHA 가이드라인, 산업안전보건법 및 중대재해처벌법을 준수합니다.</div>
-                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200 mt-2">© 2026 Korea Industrial Safety Association.</div>
+                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200 mt-2">v5.26 · © 2026 SAFE DUCKY</div>
                 </div>
             </section>
 
@@ -1916,9 +1913,26 @@
 
                 let locStr = '';
                 try {
+                    // v5.25: 전체 코드 점검 중 발견 — getCurrentPosition에 timeout:3000을 줘도, 위치 권한이
+                    // 아직 "허용/거부" 결정 전(prompt 상태)이거나 네트워크 기반 위치조회가 지연되는 일부
+                    // 환경에서는 브라우저 자체의 timeout이 정상적으로 작동하지 않고 콜백이 아예 오지 않는
+                    // 경우를 확인함. 그 상태로는 사진 압축 전체가 멈춰서 "사진을 첨부했는데 화면이 안 넘어간다"
+                    // 는 심각한 문제가 될 수 있음. 브라우저의 내부 timeout만 믿지 않고, 이 함수 자체의 독립적인
+                    // JS 타이머(3.5초)를 이중으로 걸어서 어떤 경우에도 사진 첨부가 절대 멈추지 않도록 함
+                    // (스플래시 화면의 "JS 성공 시 처리 + CSS 강제 해제 안전장치" 이중 안전장치와 동일한 원칙).
                     const pos = await new Promise((resolve, reject) => {
                         if (!navigator.geolocation) { reject(new Error('unsupported')); return; }
-                        navigator.geolocation.getCurrentPosition(resolve, reject, { timeout: 3000, maximumAge: 5 * 60 * 1000 });
+                        let settled = false;
+                        const failSafeTimer = setTimeout(() => {
+                            if (settled) return;
+                            settled = true;
+                            reject(new Error('timeout(failsafe)'));
+                        }, 3500);
+                        navigator.geolocation.getCurrentPosition(
+                            (p) => { if (settled) return; settled = true; clearTimeout(failSafeTimer); resolve(p); },
+                            (err) => { if (settled) return; settled = true; clearTimeout(failSafeTimer); reject(err); },
+                            { timeout: 3000, maximumAge: 5 * 60 * 1000 }
+                        );
                     });
                     locStr = `GPS ${pos.coords.latitude.toFixed(5)}, ${pos.coords.longitude.toFixed(5)}`;
                 } catch (e) {
@@ -2154,292 +2168,6 @@
           }
         };
 
-        // ==== QRScanner (PWA 확장모듈에서 이식) ====
-        const QRScanner = {
-          _stream: null,
-          _video: null,
-          _canvas: null,
-          _scanning: false,
-          _detector: (('BarcodeDetector' in window)) ? new BarcodeDetector({ formats: ['qr_code'] }) : null,
-          _onDecodeCb: null,
-
-          get secureContextOK() {
-            return location.protocol === 'https:' || location.hostname === 'localhost' || location.hostname === '127.0.0.1';
-          },
-
-          // ---- 실제 통합 시 이 함수 하나만 호출하면 됩니다 ----
-          // onDecode(text) 콜백으로 스캔된 문자열이 전달됩니다.
-          // 예) QRScanner.open(code => { const id = new URL(code).searchParams.get('id'); SafetyModule.openChecklistById(id); })
-          async open(onDecode) {
-            this._onDecodeCb = onDecode;
-
-            if (!this.secureContextOK) {
-              Toast.show('카메라는 HTTPS(또는 localhost) 환경에서만 접근할 수 있습니다. 배포 시 반드시 HTTPS로 서비스하세요.', 'error');
-              return;
-            }
-            if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) {
-              Toast.show('이 브라우저는 카메라 접근을 지원하지 않습니다.', 'error');
-              return;
-            }
-
-            Modal.open('modal-qr');
-            const statusEl = document.getElementById('qr-status');
-            statusEl.textContent = '카메라를 여는 중…';
-
-            try {
-              this._stream = await navigator.mediaDevices.getUserMedia({ video: { facingMode: { ideal: 'environment' } }, audio: false });
-            } catch (err) {
-              const msgMap = {
-                NotAllowedError: '카메라 권한이 거부되었습니다. 브라우저 설정에서 카메라 권한을 허용한 뒤 다시 시도해주세요.',
-                NotFoundError: '사용 가능한 카메라를 찾을 수 없습니다.',
-                NotReadableError: '카메라가 다른 앱에서 사용 중입니다. 다른 앱을 종료한 뒤 다시 시도해주세요.',
-                OverconstrainedError: '후면 카메라를 찾을 수 없어 기본 카메라로 재시도합니다.'
-              };
-              if (err.name === 'OverconstrainedError') {
-                try { this._stream = await navigator.mediaDevices.getUserMedia({ video: true, audio: false }); }
-                catch (err2) { Toast.show('카메라를 열 수 없습니다: ' + err2.message, 'error'); Modal.close('modal-qr'); return; }
-              } else {
-                Toast.show(msgMap[err.name] || ('카메라 오류: ' + err.message), 'error');
-                Modal.close('modal-qr');
-                return;
-              }
-            }
-
-            this._video = document.getElementById('qr-video');
-            this._video.srcObject = this._stream;
-            await this._video.play();
-            this._canvas = document.getElementById('qr-canvas');
-            statusEl.textContent = this._detector ? '📷 QR 코드를 화면 중앙에 맞춰주세요' : '📷 QR 코드를 화면 중앙에 맞춰주세요 (호환모드)';
-
-            // 저조도 현장(지하/터널/야간) 대응: 지원 기기에 한해 손전등 버튼 노출
-            const track = this._stream.getVideoTracks()[0];
-            const caps = track.getCapabilities ? track.getCapabilities() : {};
-            const torchBtn = document.getElementById('qr-torch-btn');
-            if (caps && caps.torch) {
-              torchBtn.classList.remove('hidden');
-              torchBtn.onclick = () => {
-                const on = torchBtn.dataset.on === '1';
-                track.applyConstraints({ advanced: [{ torch: !on }] }).then(() => { torchBtn.dataset.on = on ? '0' : '1'; torchBtn.classList.toggle('bg-amber-400', !on); });
-              };
-            } else {
-              torchBtn.classList.add('hidden');
-            }
-
-            this._scanning = true;
-            this._loop();
-          },
-
-          async _loop() {
-            if (!this._scanning) return;
-            try {
-              let value = null;
-              if (this._detector) {
-                const results = await this._detector.detect(this._video).catch(() => []);
-                if (results && results.length) value = results[0].rawValue;
-              } else if (window.jsQR && this._video.readyState === this._video.HAVE_ENOUGH_DATA) {
-                const w = this._video.videoWidth, h = this._video.videoHeight;
-                if (w && h) {
-                  this._canvas.width = w; this._canvas.height = h;
-                  const ctx = this._canvas.getContext('2d', { willReadFrequently: true });
-                  ctx.drawImage(this._video, 0, 0, w, h);
-                  const imgData = ctx.getImageData(0, 0, w, h);
-                  const result = window.jsQR(imgData.data, w, h, { inversionAttempts: 'dontInvert' });
-                  if (result && result.data) value = result.data;
-                }
-              }
-              if (value) { this._onSuccess(value); return; }
-            } catch (e) { /* 개별 프레임 디코딩 실패는 무시하고 다음 프레임 계속 시도 */ }
-            requestAnimationFrame(() => this._loop());
-          },
-
-          _onSuccess(value) {
-            this._scanning = false;
-            if (navigator.vibrate) navigator.vibrate(80);
-            const flash = document.getElementById('qr-flash');
-            flash.classList.remove('hidden');
-            setTimeout(() => flash.classList.add('hidden'), 250);
-            document.getElementById('qr-status').textContent = '✅ 인식 완료: ' + value;
-            Toast.show('QR 코드 인식 완료', 'success');
-            setTimeout(() => { this.close(); if (this._onDecodeCb) this._onDecodeCb(value); }, 400);
-          },
-
-          close() {
-            this._scanning = false;
-            if (this._stream) { this._stream.getTracks().forEach(t => t.stop()); this._stream = null; }
-            if (this._video) this._video.srcObject = null;
-            Modal.close('modal-qr');
-          }
-        };
-
-        // ==== SiteMapMarker (PWA 확장모듈에서 이식) ====
-        const SiteMapMarker = {
-          img: null,
-          pins: [], // {xPct, yPct, label, severity}
-          severityColor: { '상': '#e11d48', '중': '#f59e0b', '하': '#64748b' },
-
-          async loadFile(file) {
-            if (!file || !file.type.startsWith('image/')) { Toast.show('이미지 파일이 아닙니다.', 'error'); return; }
-            const { dataURL } = await ImageUtils.readAndCompressImage(file, 1600, 0.85);
-            const img = new Image();
-            img.onload = () => {
-              this.img = img;
-              this.pins = [];
-              document.getElementById('map-empty').classList.add('hidden');
-              document.getElementById('map-canvas-wrap').classList.remove('hidden');
-              this._draw();
-            };
-            img.src = dataURL;
-          },
-
-          _draw() {
-            const canvas = document.getElementById('map-canvas');
-            const wrap = document.getElementById('map-canvas-wrap');
-            if (!this.img || !canvas) return;
-            const maxW = wrap.clientWidth || 360;
-            const scale = maxW / this.img.width;
-            canvas.width = maxW;
-            canvas.height = Math.round(this.img.height * scale);
-            const ctx = canvas.getContext('2d');
-            ctx.drawImage(this.img, 0, 0, canvas.width, canvas.height);
-            this.pins.forEach((p, idx) => this._drawPin(ctx, canvas, p, idx + 1));
-            this._renderList();
-          },
-
-          _drawPin(ctx, canvas, p, num) {
-            const x = (p.xPct / 100) * canvas.width;
-            const y = (p.yPct / 100) * canvas.height;
-            ctx.save();
-            ctx.beginPath();
-            ctx.arc(x, y, 11, 0, Math.PI * 2);
-            ctx.fillStyle = this.severityColor[p.severity] || '#64748b';
-            ctx.fill();
-            ctx.lineWidth = 2; ctx.strokeStyle = '#fff'; ctx.stroke();
-            ctx.fillStyle = '#fff';
-            ctx.font = 'bold 11px sans-serif';
-            ctx.textAlign = 'center'; ctx.textBaseline = 'middle';
-            ctx.fillText(String(num), x, y);
-            ctx.restore();
-          },
-
-          onCanvasClick(evt) {
-            if (!this.img) return;
-            const canvas = document.getElementById('map-canvas');
-            const rect = canvas.getBoundingClientRect();
-            const clientX = evt.touches ? evt.touches[0].clientX : evt.clientX;
-            const clientY = evt.touches ? evt.touches[0].clientY : evt.clientY;
-            const xPct = ((clientX - rect.left) / rect.width) * 100;
-            const yPct = ((clientY - rect.top) / rect.height) * 100;
-            const label = prompt('위험 요인을 간단히 입력하세요 (예: 개구부 추락위험)');
-            if (label === null || label.trim() === '') return;
-            this.pins.push({ xPct, yPct, label: label.trim(), severity: '중' });
-            this._draw();
-          },
-
-          removePin(idx) { this.pins.splice(idx, 1); this._draw(); },
-
-          setSeverity(idx, sev) { this.pins[idx].severity = sev; this._draw(); },
-
-          _renderList() {
-            const el = document.getElementById('map-pin-list');
-            if (!el) return;
-            if (!this.pins.length) { el.innerHTML = `<p class="text-[10px] text-slate-400 text-center py-2">도면을 탭하여 위험지점을 등록하세요</p>`; return; }
-            el.innerHTML = this.pins.map((p, i) => `
-              <div class="flex items-center gap-2 bg-slate-50 rounded-lg px-2 py-1.5">
-                <span class="w-5 h-5 rounded-full flex items-center justify-center text-white text-[10px] font-bold flex-shrink-0" style="background:${this.severityColor[p.severity]}">${i + 1}</span>
-                <span class="flex-1 text-[11px] text-slate-700 truncate">${p.label}</span>
-                <select onchange="SiteMapMarker.setSeverity(${i}, this.value)" class="text-[9px] border border-slate-200 rounded px-1 py-0.5">
-                  <option value="상" ${p.severity === '상' ? 'selected' : ''}>상</option>
-                  <option value="중" ${p.severity === '중' ? 'selected' : ''}>중</option>
-                  <option value="하" ${p.severity === '하' ? 'selected' : ''}>하</option>
-                </select>
-                <button onclick="SiteMapMarker.removePin(${i})" class="text-slate-400 hover:text-rose-600 text-[11px]">✕</button>
-              </div>`).join('');
-          },
-
-          // 핀이 찍힌 상태 그대로 1장의 이미지로 병합 — 기존 사진첨부 필드에 바로 사용 가능
-          exportMerged(quality = 0.85) {
-            const canvas = document.getElementById('map-canvas');
-            if (!canvas || !this.img) { Toast.show('먼저 도면을 불러오세요.', 'error'); return null; }
-            return canvas.toDataURL('image/jpeg', quality);
-          }
-        };
-
-
-        // ==== ImageUtils (PWA 확장모듈에서 이식) ====
-        const ImageUtils = {
-          MAX_INPUT_BYTES: 30 * 1024 * 1024, // 30MB — 비정상적으로 큰 파일(동영상 오선택 등) 사전 차단
-
-          // v4.6의 Utils.readAndCompressImage()와 완전히 동일한 시그니처/반환값이라 그대로 교체 가능합니다.
-          async readAndCompressImage(file, maxDim = 1280, quality = 0.82) {
-            if (!file || !file.type || !file.type.startsWith('image/')) throw new Error('이미지 파일이 아닙니다.');
-            if (file.size > this.MAX_INPUT_BYTES) throw new Error(`파일이 너무 큽니다(${(file.size / 1024 / 1024).toFixed(1)}MB). 30MB 이하 이미지만 첨부할 수 있습니다.`);
-
-            const oriented = await this._loadOrientedBitmap(file); // EXIF 보정된 경로 (지원 브라우저)
-            let source, srcW, srcH, cleanup = () => {};
-
-            if (oriented) {
-              source = oriented; srcW = oriented.width; srcH = oriented.height;
-              cleanup = () => oriented.close && oriented.close();
-            } else {
-              // 레거시 폴백: 기존 v4.6과 동일한 방식(EXIF 미보정, 그러나 100% 호환 보장)
-              const legacy = await this._loadLegacyImage(file);
-              source = legacy; srcW = legacy.naturalWidth || legacy.width; srcH = legacy.naturalHeight || legacy.height;
-            }
-
-            let width = srcW, height = srcH;
-            if (width > maxDim || height > maxDim) {
-              const scale = maxDim / Math.max(width, height);
-              width = Math.max(1, Math.round(width * scale));
-              height = Math.max(1, Math.round(height * scale));
-            }
-            const canvas = document.createElement('canvas');
-            canvas.width = width; canvas.height = height;
-            const ctx = canvas.getContext('2d');
-            ctx.fillStyle = '#ffffff'; ctx.fillRect(0, 0, width, height);
-            ctx.drawImage(source, 0, 0, width, height);
-            cleanup();
-            return { dataURL: canvas.toDataURL('image/jpeg', quality), width, height };
-          },
-
-          async _loadOrientedBitmap(file) {
-            if (!('createImageBitmap' in window)) return null;
-            try { return await createImageBitmap(file, { imageOrientation: 'from-image' }); }
-            catch (e) { return null; } // 일부 구형 브라우저는 옵션 미지원 → 조용히 레거시 경로로
-          },
-
-          _loadLegacyImage(file) {
-            return new Promise((resolve, reject) => {
-              const reader = new FileReader();
-              reader.onload = (e) => {
-                const img = new Image();
-                img.onload = () => resolve(img);
-                img.onerror = () => reject(new Error('이미지를 불러오지 못했습니다.'));
-                img.src = e.target.result;
-              };
-              reader.onerror = () => reject(new Error('파일을 읽지 못했습니다.'));
-              reader.readAsDataURL(file);
-            });
-          },
-
-          // 다중 사진 순차 압축 — 병렬 처리로 인한 순간 메모리 스파이크 방지
-          async compressBatch(fileList, { maxDim = 1280, quality = 0.82, onProgress } = {}) {
-            const files = Array.from(fileList);
-            const results = [];
-            for (let i = 0; i < files.length; i++) {
-              if (onProgress) onProgress(i + 1, files.length, files[i].name);
-              try {
-                const r = await this.readAndCompressImage(files[i], maxDim, quality);
-                results.push({ ok: true, file: files[i].name, ...r });
-              } catch (err) {
-                results.push({ ok: false, file: files[i].name, error: err.message });
-              }
-              // 다음 파일 처리 전 이벤트 루프에 양보 → UI 프리즈 방지 + GC가 이전 캔버스/이미지를 정리할 틈 확보
-              await new Promise(r => setTimeout(r, 30));
-            }
-            return results;
-          }
-        };
-
         // ==== LocationUtils (PWA 확장모듈에서 이식) ====
         const LocationUtils = {
           // v4.6의 Actions.fetchGPSLocation()을 대체 — 타임아웃/에러구분/로딩상태 보강판
@@ -2459,65 +2187,6 @@
                 { timeout, enableHighAccuracy, maximumAge: 30000 }
               );
             });
-          }
-        };
-
-        // ==== QuickReport (PWA 확장모듈에서 이식) ====
-        const QuickReport = {
-          async handleCapture(file) {
-            if (!file) return;
-            const statusEl = document.getElementById('quick-status');
-            statusEl.textContent = '📷 사진 처리 중…';
-            statusEl.className = 'text-[11px] text-amber-600 font-bold text-center';
-
-            let photoData = null;
-            try { photoData = await ImageUtils.readAndCompressImage(file, 1280, 0.8); }
-            catch (err) { Toast.show('사진 처리 실패: ' + err.message, 'error'); statusEl.textContent = ''; return; }
-
-            const record = {
-              id: Date.now(),
-              title: '긴급 현장 신고 (상세 내용 미입력)',
-              severity: '상',
-              desc: '',
-              photo: photoData.dataURL,
-              gps: null,
-              status: '접수',
-              date: new Date().toISOString().slice(0, 10),
-              time: new Date().toTimeString().slice(0, 5)
-            };
-
-            // 신고 "접수"는 GPS를 기다리지 않고 즉시 완료 처리 — GPS는 백그라운드로 보강
-            if (navigator.vibrate) navigator.vibrate([50, 30, 50]);
-            Toast.show('🆘 긴급 신고가 접수되었습니다. 위치정보 확인 중…', 'success');
-            this._renderResult(record);
-
-            LocationUtils.getCurrentPosition().then(pos => {
-              record.gps = `${pos.lat.toFixed(5)}, ${pos.lng.toFixed(5)}`;
-              this._renderResult(record);
-              Toast.show('위치정보가 추가되었습니다.', 'success');
-            }).catch(err => {
-              // 위치 실패는 신고 자체를 막지 않음 — 이미 접수된 신고에 "위치 미확보"만 표시
-              record.gps = '위치 미확보 (' + err.message + ')';
-              this._renderResult(record);
-            });
-
-            statusEl.textContent = '';
-          },
-
-          _renderResult(record) {
-            const el = document.getElementById('quick-result');
-            el.innerHTML = `
-              <div class="bg-rose-50 border border-rose-200 rounded-xl p-3 space-y-2 fade-in">
-                <div class="flex gap-2">
-                  <img src="${record.photo}" class="w-16 h-16 rounded-lg object-cover border border-rose-200 flex-shrink-0">
-                  <div class="flex-1 min-w-0">
-                    <p class="text-[11px] font-bold text-rose-700">${record.title}</p>
-                    <p class="text-[10px] text-slate-500">${record.date} ${record.time} · 위험도 상</p>
-                    <p class="text-[10px] text-slate-500">${record.gps ? '📍 ' + record.gps : '📍 위치정보 확인 중…'}</p>
-                  </div>
-                </div>
-                <button onclick="alert('실제 통합 시 이 버튼은 v4.6의 위험신고 상세 수정 폼을 여는 SafetyModule 함수와 연결합니다.')" class="w-full py-1.5 bg-white border border-rose-300 text-rose-600 font-bold text-[10px] rounded-lg">✏️ 상세 내용 나중에 추가하기</button>
-              </div>`;
           }
         };
 
@@ -2743,40 +2412,11 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
 부칙: 사업자등록번호 [000-00-00000] (등록 완료 시 실제 번호로 갱신)`;
 
 
-        // v5.11: 로컬 "신규 등록"을 어떤 서버 API로, 어떤 필드로 보낼지의 매핑표.
-        // 2026-09-11: 서버 연동을 제거하면서 이 표의 동기화 관련 설명은 더 이상 해당되지 않습니다.
-        // 2026-08-28 후속조치(3절): 서버 src/routes/attachments.js의 ENTITY_TYPES 화이트리스트와
-        // 반드시 1:1로 일치해야 합니다 - 한쪽만 바꾸면 업로드가 400으로 거부됩니다.
-
-        // 2026-08-30(전자서명 서버 연동): 서명 캔버스가 만드는 base64 dataURL을 실제 파일(Blob)로
-        // 바꿔서 이미 만들어둔 첨부파일 API에 그대로 올린다 - 서명 전용 저장소를 새로 만들지 않고
-        // 기존 인프라(용량제한/파일형식검증/조직별 접근제어가 이미 적용된)를 재사용한다.
-
-
-        // 유형만 처리합니다 - 매핑표와 이 함수의 API 경로가 항상 1:1로 맞아야 합니다.
-        // 2026-08-28 후속조치(출시전 점검보고서 3절 "12개 모듈 PATCH API 부재" - 서버 쪽은
-        // 이미 구현했고, 이제 프론트엔드가 실제로 그걸 쓰도록 연결합니다): 예전엔 "서버 API가
-        // 아직 생성만 지원"해서 신규 등록만 동기화했는데, 이제 수정도 동기화합니다.
-        // record.type이 '_update'로 끝나면 PATCH, 그 외(기존과 동일)엔 POST를 씁니다.
-
-        // v5.15: 85개 법령 체크리스트(State.checklist)를 서버의 legal_checklist_items와
-        // item_no(1~85) 기준으로 매칭해 동기화합니다. 서버는 사업장당 한 세트만 있고 id가
-        // 매번 다르게 채번되므로, "몇 번 항목인지"로 서버 id를 찾아 그 항목만 갱신합니다.
-
-        // 서버 CAPA 상태전이 규칙의 클라이언트 측 사본입니다(src/routes/capa.js의 ALLOWED_TRANSITIONS와
-        // 동일). 어떤 버튼을 보여줄지 결정하는 용도일 뿐, 최종 검증은 항상 서버가 다시 하므로
-        // 여기 정의가 서버와 살짝 어긋나도 안전합니다(서버가 맞으면 통과, 틀리면 거부).
-        const CAPA_TRANSITIONS_MIRROR = {
-            '등록': ['조치중'], '조치중': ['완료요청'], '완료요청': ['검증중'],
-            '검증중': ['승인', '반려'], '반려': ['조치중'], '승인': ['종결'],
-        };
-        // 서버 src/routes/ptw.js의 PTW_TRANSITIONS와 동일한 사본. 마찬가지로 버튼 노출용일 뿐,
-        // 최종 검증은 항상 서버가 다시 합니다.
-        const PTW_TRANSITIONS_MIRROR = {
-            '등록': ['위험확인중'], '위험확인중': ['승인대기', '반려'], '승인대기': ['승인됨', '반려'],
-            '승인됨': ['작업중'], '작업중': ['종료'], '반려': ['등록'],
-        };
-
+        // v5.25 전체 코드 점검 중 정리: 이 위치에 있던 v5.11~v5.15 시절의 "로컬 등록을 어떤 서버
+        // API로 보낼지" 관련 주석들(첨부파일 화이트리스트·전자서명 API·PATCH 동기화·법정체크리스트
+        // 서버 매칭 등)은 2026-09-11 서버 연동을 완전히 제거하면서 실제 코드가 없어졌는데도 주석만
+        // 남아있어, 마치 지금도 서버와 동기화하는 것처럼 오해할 수 있어 삭제함(실제로는 전부 로컬
+        // 저장소에만 저장됨). 데이터/동작 변경 없음, 죽은 주석 정리만 함.
 
         const SEED_DATA = {
             tasks: [
@@ -3446,7 +3086,48 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
         // 규칙: 여기 등록되는 모든 migration 함수는 "필드 추가"만 하며,
         // 기존 필드 값은 절대 덮어쓰거나 삭제하지 않는다.
         // ============================================================
-        const DB_VERSION = 32; // v32: 2026-09-12 사용자가 제공한 "세더키" 브랜드 캐릭터 이미지 3장을 실제로 잘라서 앱에 반영. ① 요청서 11번의 "로그인 화면"은 이 앱의 서버 없음·기기 전용 저장 원칙과 충돌하고 실제 인증 없는 가짜 로그인이 될 위험이 있어, 사용자 확인을 거쳐 브랜드 스플래시 화면(로그인 입력창 없음, Actions.init() 완료 후 자동으로 사라짐)으로 대체. ② 앱 아이콘(icon-192/512/maskable/apple-touch/favicon) 5종을 기존 관련없는 번개 아이콘에서 세더키 마스코트로 교체. ③ 상단 네비게이션의 🐤 이모지를 실제 세더키 아이콘 이미지로 교체(이미지 로드 실패 시 이모지로 자동 폴백). ④ 각 모듈 목록 화면의 "등록된 데이터가 없습니다" 빈 화면 문구가 15곳 넘게 중복돼 있던 것을 Utils.emptyStateCard() 공통 함수로 통합하면서, 위험성평가·안전교육·PPE·건강관리·MSDS·작업허가·CAPA·법정검사·법정회의점검 9개 모듈은 전용 세더키 일러스트를, 나머지 모듈은 기본 세더키 그림을 적용(이미지 로드 실패 시 자동으로 숨김). ⑤ 브랜드 컬러 토큰 8종(Safety Green 등)을 CSS 변수로 도입(기존 화면 색상은 그대로 유지, 새 요소부터 사용). 데이터 구조 변경 없음(화면·자산 파일만 추가). / v31: 2026-09-12 사용자 피드백 재반영 2건. ① 위험성평가 엑셀 결재란: v29에서 담당/검토/승인 3단 서명칸을 추가했으나 "여전히 부자연스럽다"는 재지적을 받음. 이 서식은 위험성 매트릭스 구조상 12개의 좁은 고정 폭 열([8,12,12,12,11,11,11,14,13,13,15,15])을 쓰는데, 3단 서명칸을 자연스럽게 넣을 만한 폭이 나오지 않아 사용자가 명시적으로 허용한 대로("자연스럽게 안될 것 같으면 그냥 공란도 괜찮으니") 결재칸 자체를 제거하고 사업장명 한 줄만 남김(다른 모듈은 열 폭이 넉넉해 결재란을 그대로 유지 — _buildGenericWorkbook 영향 없음). ② 안전모듈 메뉴 그룹(SAFETY_MENU_GROUPS) 재편: "설비·물질"→"보건·보호구"(건강진단·MSDS·PPE로 재구성), 법정검사·설비관리를 새 그룹 "설비·교육"으로 이동(안전교육도 함께 편입 — 그룹명에 맞춰 배치한 판단), "사람·조직"→"안전체계"로 명칭 변경(법정선임/협력업체/조직도/비상연락망 유지). 5그룹→6그룹. 항목 추가/삭제 없음, 총 23개 그대로. 데이터 구조 변경 없음(화면·엑셀 출력 로직만 수정). / v30: 2026-09-12 "☰ 전체" 안전모듈 메뉴 패널을 5개 그룹(현장/사고·개선/설비·물질/사람·조직/관리, SAFETY_MENU_GROUPS)으로 묶어서 표시하도록 개선(사용자 제공 요청서 6번). 기능·항목 제거 없이 탐색 화면(비편집모드)에만 그룹 헤더를 추가했고, 기존 "메뉴 순서 편집"(▲▼)은 편집모드에서 그대로 전체 목록 기준으로 동작. 데이터 구조 변경 없음(화면 표시 로직만 수정). / v29: 2026-09-12 위험성평가 엑셀 서식(_buildRiskWorkbook, 건별/목록 공용)에 사업장명·결재란(담당/검토/승인)이 누락되어 있던 것을 추가. v23/v27에서 다른 모든 모듈(CAPA·MSDS·PTW·TBM·교육·법정회의점검·주간일지·설비·법정검사·조직도·비상연락망)에는 이미 반영됐는데, 위험성평가만 전용 매트릭스 서식을 그대로 써서 그 개선을 적용받지 못한 채 남아있던 것(사용자 제보: "엑셀에 결재란 자체가 사라졌다" — 실제로는 이 모듈에 처음부터 없었던 것으로 확인). 이후 같은 날 2차 수정으로, 평가일자/작성자 값과 결재 서명칸이 같은 줄·같은 열에 겹쳐 부자연스러워 보인다는 지적을 받아 사업장명/결재라벨(2행)·평가일자·작성자(3행)·실제 서명 빈칸(4행)을 완전히 분리. 데이터 구조 변경은 없음(엑셀 출력 코드만 수정, 저장 데이터는 그대로 유지). / v28: 2026-09-12 사고관리에 산업재해조사표(별지 제30호서식) 제출용 상세항목(재해자 인적사항·재해발생 작업정보·재발방지계획 동의·작성자·건설업/사내수급/파견 정보) 추가 및 전용 엑셀 서식(_buildAccidentReportWorkbook, 공식 서식 그대로 재현) 신설. 목록의 "수정" 버튼 옆에 "조사표 출력" 버튼 추가. 사업장 정보(siteInfo)에 사업자등록번호·산재관리번호·근로자수·업종·소재지·관할노동청 추가(설정에서 한 번 입력 후 전 사고기록에 재사용). / v27: 2026-09-12 MSDS 관리대장에 사용자 제공 참고양식 기준 항목 추가(유해성분류, 사용자정보(회사명/공종/장소), 관리책임자(정/부), 현장반입일, MSDS자료 비치여부, 관리요령, 경고표지(GHS 그림문자 9종)/신호어) 및 전용 엑셀 서식(_buildMsdsWorkbook, 2단 그룹헤더) 신설. 같은 릴리스에서 전 모듈 공통 엑셀 출력(_buildGenericWorkbook)·법정회의점검 출력의 "사업장명" 라벨이 연번용 좁은 열(너비5)에 끼어 "사업/장명"으로 줄바꿈되던 표시 오류 수정, 법정검사/설비관리/안전관리조직도/비상연락망 4개 모듈이 서식 없는 단순 CSV로만 내보내지던 문제(EXCEL_COLUMNS 누락) 보완. / v26: 2026-09-12 안전교육일지에 사용자 제공 참고양식 기준 항목 추가(교육구분 체크박스, 교육장소/교육시간/교육과목/교육내용, 교육실시자 직책·성명, 교육 미실시 사유) 및 전용 엑셀 서식(_buildEduWorkbook, 참석자·미참석자 명단 및 서명·사진첨부 포함) 신설. / v25: 2026-09-12 TBM일지에 사용자 제공 참고양식 기준 항목 추가(시공방법/시공순서/주의사항/기타사항, 관련 MSDS 해당물질, 위험요인-안전대책 반복쌍) 및 전용 엑셀 서식(_buildTbmWorkbook, 참석자 서명 포함) 신설. / v24: 2026-09-12 작업허가서(PTW)에 사용자 제공 참고양식 기준 항목 추가(공사명/작업신청자/작업인원/관리감독자/안전관리자/화기감시자/비상연락, 가스측정기록, 작업자명단, 4단계 결재 메모) 및 전용 엑셀 서식(가스측정표·근로자명단표·4단계결재란 포함) 신설. / v23: 2026-09-12 내비게이션 구조 개편 — 하단 탭 "법규체크"를 "대시보드"로 교체(기존 안전모듈 내부 대시보드를 최상위 탭으로 승격), 법규체크는 안전모듈 서브탭으로 이동. "오늘 반드시 처리해야 할 업무"에 [일일]/[주간] 등 미체크 반복업무도 포함. 대시보드 카드 우선순위 재정렬 및 법정검사/설비/조직도/비상연락망 카드 추가. 엑셀 출력 서식 품질 개선 — 사업장명(siteInfo) 설정 신설 및 전 모듈 공통 엑셀 출력물 상단에 사업장명·결재란(담당/검토/승인) 추가, 법정회의·점검 전용 서식에도 동일 반영. / v22: 법정검사(안전검사)/설비관리/안전관리조직도/비상연락망 4개 모듈 추가 + CAPA 생성 시 전체 모듈 등록·수정 모달이 깨지던 ATTACHMENT_ENTITY_TYPES 참조 오류 수정(서버 폐기 전환 때 남은 죽은 코드) + 85개 법정 체크리스트 누락 항목 2개 보완(안전검사, 안전보건현황공시) + 반복위험요인 메뉴가 안 열리던 버그 수정 / v21: 2026-09-11 CAPA 상태 7단계→3단계(등록/조치중/완료) 단순화 — 1인 사용 앱에서 본인이 본인에게 결재하는 구조가 무의미해 정리. 옛 상태값은 _legacyStatus에 보존. / v1: 버전 관리 이전의 초기 데이터 구조 (기존 사용자 데이터) / v2: 버전 관리 도입 / v3: 일지 메모 기능 추가 / v4: TBM 일지 기능 추가 / v5: 법정선임 관리 기능 추가 / v6: PPE(개인보호구) 관리 기능 추가 / v7: 협력업체 관리 기능 추가 / v8: 산업재해(사고) 관리 기능 추가 / v9: 안전의 소리함(종사자 의견청취) 기능 추가 / v10: 위험성평가 가능성·중대성(개선전/후) 및 안전보건조치 위반사항 필드 추가 / v11: 법정회의·점검(안전보건협의체/산업안전보건위원회/순회점검/합동점검) 기능 추가 / v12: 위험성평가·법정회의점검 첨부사진 개선전/후 2장으로 확장 / v13: CAPA(개선조치) 독립 객체 도입 — 위험성평가/사고/아차사고/법정회의점검에서 발생한 조치사항을 자체 id·상태(등록→조치중→완료요청→검증중→승인/반려→종결)·조치전후 사진을 가진 별도 레코드로 관리 / v14: Core 엔진 강화 — 감사로그(auditLog)·전문 ID 채번 카운터(idCounters)·오류 로그(errorLog) 추가. 기존 레코드의 id는 전혀 바꾸지 않으며, 신규 등록 건부터 RISK-2026-000001 형식의 ID가 적용됩니다. / v15: 협력업체 드릴다운 — 위험성평가/사고/아차사고/TBM/교육/법정회의점검/PTW 7개 모듈에 "관련 협력업체" 필드 추가(빈 값으로 시작, 기존 항목은 전부 "해당없음"으로 간주됨). 협력업체 안전점수 KPI 계산의 기준이 됩니다. / v16: 위험성평가 재평가 연결(previousAssessmentId) 및 아차사고 "발생장소" 필드 추가. 반복위험 감지·장소별 분석의 기준이 됩니다. / v17: 안전교육에 참석자/미참석자 명단(attendeeList/absenteeList)·다음 교육 예정일(nextEduDate)·사진(photo) 필드 추가. 기존 요약 문자열(attendees)은 그대로 보존됩니다. / v18: PTW(작업허가서)에 승인 워크플로우 상태(등록→위험확인중→승인대기→승인됨→작업중→종료)와 작업예정일 필드 추가. 기존 approver 필드에 값이 있으면 "승인됨"으로, 없으면 "등록"으로 간주합니다(추측이 아니라 화면에 이미 쓰이던 "미승인/승인자 있음" 구분을 그대로 승계). / v19: 안전모듈 메뉴 순서(safetyMenuOrder) 추가 — 사용자가 메뉴 순서를 직접 편집할 수 있게 되어, 그 순서를 기억합니다. 기존 사용자는 기존 화면과 동일한 기본 순서로 시작합니다. / v20: 전체 점검 중 발견한 버그 수정 — MSDS 첨부파일(fileData/fileName/fileSize)이 입력창은 있었지만 저장되지 않던 것을 고쳤고, 화면에 전혀 쓰이지 않던 고정값 pictograms 필드를 정리했습니다.
+        const DB_VERSION = 35; // v35: 2026-09-12 사용자가 위험성평가 엑셀 스크린샷을 보내며 지적한 2건
+        // 수정. ① 위험성평가 엑셀 상단이 "사업장명" 단독 줄 + "평가일자·작성자" 줄로 2줄이었는데,
+        // 작성자 값 뒤에 남는 병합 셀 여백이 화면에서 빈 칸처럼 보여 "빈칸에 어울릴만한거 하나
+        // 넣는 형식으로 바꿔달라"는 요청을 받음 → 두 줄을 한 줄로 합쳐 평가일자·작성자(또는 목록
+        // 출력 시 총 건수)·사업장명 세 항목을 12개 열에 4칸씩 고르게 배분(빈 여백 제거). ② MSDS
+        // 관리대장 엑셀의 "결재(담당/검토/승인)" 서명란도 "칸이 자연스럽지 않다"는 지적을 받아
+        // 제거 — 원인은 이 표가 원래 있던 19개 열(폭이 9.5~28로 제각각) 중 뒤쪽 3칸(관리요령·
+        // 첨부파일·비고 자리, 폭 28/14/16)을 그대로 서명칸으로 재사용해 3칸 너비가 서로 크게
+        // 달랐던 것. 위험성평가(v22/v31)에서 이미 같은 이유로 결재란을 뺀 것과 동일한 판단으로
+        // 정리. 데이터 구조 변경 없음(엑셀 출력 코드만 수정).
+        // v34: 2026-09-12 사용자가 "이번 기회에 다른 모든 걸 점검해서 수정이 필요한
+        // 부분은 판단해서 즉시 수정해달라"고 전권 위임 → 전체 코드(약 11,700줄)를 정적 점검해 실제
+        // 코드 근거가 있는 문제만 골라 수정함(추측성 지적 제외). ① [실사용 영향 큼] "위험신고" 빠른입력
+        // 화면의 사진첨부(Actions.handlePhotoSelect)가 다른 모든 모듈과 달리 압축 없이 원본 사진을
+        // 그대로 저장하고 있던 것을 발견 — 가장 자주 쓰이는 사진첨부 진입점이라 localStorage 용량
+        // 한도에 가장 빨리 부딪힐 수 있는 위험 요인이었음. 다른 모듈과 동일하게 Utils.readAndCompressImage
+        // 압축 로직으로 통일. ② [실사용 영향 큼] 이 압축 함수 내부의 GPS 워터마크 기능이
+        // navigator.geolocation.getCurrentPosition을 쓰는데, 브라우저 자체의 timeout 옵션이 일부
+        // 환경(위치 권한이 아직 결정 안 됐거나 네트워크 위치조회가 지연되는 경우)에서 정상 작동하지
+        // 않아 사진 압축 전체가 무한정 멈출 수 있는 것을 테스트 중 실제로 재현·확인함 — 브라우저의
+        // timeout만 믿지 않고 별도의 독립 JS 타이머(3.5초)를 이중 안전장치로 추가해, 어떤 환경에서도
+        // 사진 첨부가 절대 멈추지 않도록 함. ③ [사용자 혼란 유발] 작업허가서(PTW) 인쇄 기능이 서버
+        // 폐기(2026-09-11) 이후에도 "이 문서는 아직 서버에 동기화되지 않아 QR 진위확인이 안 됐으니
+        // 서버 연결 후 다시 인쇄해주세요"라는, 지금은 있을 수 없는 서버 재연결을 안내하는 문구를 인쇄할
+        // 때마다 보여주고 있던 것을 발견 — 실제 현장에서 인쇄해 쓰는 공식 문서에 혼란스러운 문구가
+        // 계속 찍히는 문제라 판단해, 애초에 서버 없이는 동작할 수 없는 진위확인 QR 기능 자체를
+        // 제거하고 평범하게 바로 인쇄되도록 정리(더 이상 쓰이지 않는 qrcodejs 외부 CDN 스크립트도 함께
+        // 제거해 초기 로딩 의존성을 하나 줄임). ④ [코드 정리] 2026-09-11 서버 폐기 이후에도 실제로는
+        // 어디서도 호출되지 않는 죽은 코드 약 340줄을 확인 후 제거: QuickReport(긴급신고 프로토타입),
+        // SiteMapMarker(도면 위험지점 표시), QRScanner(QR스캔), ImageUtils(Utils.readAndCompressImage의
+        // 구버전 중복 구현), 그리고 CAPA_TRANSITIONS_MIRROR/PTW_TRANSITIONS_MIRROR(어디서도 안 쓰이는
+        // "서버가 다시 검증하니 안전하다"는, 서버가 없어진 지금은 사실과 다른 주석이 달린 죽은 상수).
+        // 이 모듈들은 화면 어디에도 연결된 버튼이 없어 실제로 한 번도 실행될 수 없는 상태였음(DOM
+        // id 전수 대조로 확인). ⑤ [사용자 혼란 유발] AI비서 탭 헤더의 "AI Safety Engine v4.5"라는
+        // 리브랜딩 이전 버전 표기, 설정 탭 하단의 "스마트 안전관리 시스템 Pro (Enterprise v4.7)"라는
+        // 예전 문구(v5.24에서 정정한 것과 같은 종류의 잔존 텍스트)를 추가로 발견해 정리.
+        // 검토했지만 이번에는 손대지 않은 것: handleRiskPhotoSelect/handleLegalPhotoSelect/
+        // handleCapaPhotoSelect의 중복 코드(리팩터링 후보이나 3개 라이브 모듈의 사진첨부를 동시에
+        // 건드리는 회귀 위험 대비 실익이 낮다고 판단), localStorage 키에 남은 옛 제품명("safety_meerkat_
+        // pro_v4.5_data")은 기존 사용자 데이터 마이그레이션 경로 없이는 안전하게 바꿀 수 없어 보존.
+        // 데이터 구조 변경 없음(화면·죽은 코드·주석 정리 및 사진 압축/워터마크 견고성 개선만 수정).
+        // v33: 2026-09-12 사용자가 실기기 테스트로 발견한 문제 2건 수정. ① 상단 헤더의 버전 배지("v5.23 · 세더키 브랜드 적용(...)")가 문구가 길어 실제 휴대폰 화면에서 3줄로 줄바꿈되며 헤더 세로 공간을 과도하게 차지한다는 지적을 받아, 헤더에서 완전히 제거(사용자: "v.23 이런건 이제 필요없을 것 같고"). 버전 이력은 이 코드 주석과 업데이트 보고서에 계속 남기고, 화면에는 설정 탭 하단 정보 박스에 짧게만 표시(겸사겸사 그 박스에 남아있던 예전 서버 버전 시절 문구 "스마트 안전관리 시스템 Pro (Enterprise v4.7...)"도 SAFE DUCKY로 정정 — 리브랜딩 후에도 안 고쳐졌던 실제 오류). ② 위험성평가·안전교육·아차사고·법정회의점검·CAPA 등 전 모듈의 사진첨부 input에 걸려있던 capture="environment" 속성 제거 — 이 속성이 있으면 모바일 브라우저가 갤러리 선택 없이 카메라 촬영만 강제로 열어, "사진을 고를 수 있는게 아니라 촬영밖에 안 뜬다"는 사용자 지적의 실제 원인이었음. 속성만 제거하면 accept="image/*"는 그대로라 브라우저 기본 선택창(촬영/갤러리 중 선택)이 뜨는 것으로 동작 확인. 데이터 구조 변경 없음(화면·속성만 수정). / v32: 2026-09-12 사용자가 제공한 "세더키" 브랜드 캐릭터 이미지 3장을 실제로 잘라서 앱에 반영. ① 요청서 11번의 "로그인 화면"은 이 앱의 서버 없음·기기 전용 저장 원칙과 충돌하고 실제 인증 없는 가짜 로그인이 될 위험이 있어, 사용자 확인을 거쳐 브랜드 스플래시 화면(로그인 입력창 없음, Actions.init() 완료 후 자동으로 사라짐)으로 대체. ② 앱 아이콘(icon-192/512/maskable/apple-touch/favicon) 5종을 기존 관련없는 번개 아이콘에서 세더키 마스코트로 교체. ③ 상단 네비게이션의 🐤 이모지를 실제 세더키 아이콘 이미지로 교체(이미지 로드 실패 시 이모지로 자동 폴백). ④ 각 모듈 목록 화면의 "등록된 데이터가 없습니다" 빈 화면 문구가 15곳 넘게 중복돼 있던 것을 Utils.emptyStateCard() 공통 함수로 통합하면서, 위험성평가·안전교육·PPE·건강관리·MSDS·작업허가·CAPA·법정검사·법정회의점검 9개 모듈은 전용 세더키 일러스트를, 나머지 모듈은 기본 세더키 그림을 적용(이미지 로드 실패 시 자동으로 숨김). ⑤ 브랜드 컬러 토큰 8종(Safety Green 등)을 CSS 변수로 도입(기존 화면 색상은 그대로 유지, 새 요소부터 사용). 데이터 구조 변경 없음(화면·자산 파일만 추가). / v31: 2026-09-12 사용자 피드백 재반영 2건. ① 위험성평가 엑셀 결재란: v29에서 담당/검토/승인 3단 서명칸을 추가했으나 "여전히 부자연스럽다"는 재지적을 받음. 이 서식은 위험성 매트릭스 구조상 12개의 좁은 고정 폭 열([8,12,12,12,11,11,11,14,13,13,15,15])을 쓰는데, 3단 서명칸을 자연스럽게 넣을 만한 폭이 나오지 않아 사용자가 명시적으로 허용한 대로("자연스럽게 안될 것 같으면 그냥 공란도 괜찮으니") 결재칸 자체를 제거하고 사업장명 한 줄만 남김(다른 모듈은 열 폭이 넉넉해 결재란을 그대로 유지 — _buildGenericWorkbook 영향 없음). ② 안전모듈 메뉴 그룹(SAFETY_MENU_GROUPS) 재편: "설비·물질"→"보건·보호구"(건강진단·MSDS·PPE로 재구성), 법정검사·설비관리를 새 그룹 "설비·교육"으로 이동(안전교육도 함께 편입 — 그룹명에 맞춰 배치한 판단), "사람·조직"→"안전체계"로 명칭 변경(법정선임/협력업체/조직도/비상연락망 유지). 5그룹→6그룹. 항목 추가/삭제 없음, 총 23개 그대로. 데이터 구조 변경 없음(화면·엑셀 출력 로직만 수정). / v30: 2026-09-12 "☰ 전체" 안전모듈 메뉴 패널을 5개 그룹(현장/사고·개선/설비·물질/사람·조직/관리, SAFETY_MENU_GROUPS)으로 묶어서 표시하도록 개선(사용자 제공 요청서 6번). 기능·항목 제거 없이 탐색 화면(비편집모드)에만 그룹 헤더를 추가했고, 기존 "메뉴 순서 편집"(▲▼)은 편집모드에서 그대로 전체 목록 기준으로 동작. 데이터 구조 변경 없음(화면 표시 로직만 수정). / v29: 2026-09-12 위험성평가 엑셀 서식(_buildRiskWorkbook, 건별/목록 공용)에 사업장명·결재란(담당/검토/승인)이 누락되어 있던 것을 추가. v23/v27에서 다른 모든 모듈(CAPA·MSDS·PTW·TBM·교육·법정회의점검·주간일지·설비·법정검사·조직도·비상연락망)에는 이미 반영됐는데, 위험성평가만 전용 매트릭스 서식을 그대로 써서 그 개선을 적용받지 못한 채 남아있던 것(사용자 제보: "엑셀에 결재란 자체가 사라졌다" — 실제로는 이 모듈에 처음부터 없었던 것으로 확인). 이후 같은 날 2차 수정으로, 평가일자/작성자 값과 결재 서명칸이 같은 줄·같은 열에 겹쳐 부자연스러워 보인다는 지적을 받아 사업장명/결재라벨(2행)·평가일자·작성자(3행)·실제 서명 빈칸(4행)을 완전히 분리. 데이터 구조 변경은 없음(엑셀 출력 코드만 수정, 저장 데이터는 그대로 유지). / v28: 2026-09-12 사고관리에 산업재해조사표(별지 제30호서식) 제출용 상세항목(재해자 인적사항·재해발생 작업정보·재발방지계획 동의·작성자·건설업/사내수급/파견 정보) 추가 및 전용 엑셀 서식(_buildAccidentReportWorkbook, 공식 서식 그대로 재현) 신설. 목록의 "수정" 버튼 옆에 "조사표 출력" 버튼 추가. 사업장 정보(siteInfo)에 사업자등록번호·산재관리번호·근로자수·업종·소재지·관할노동청 추가(설정에서 한 번 입력 후 전 사고기록에 재사용). / v27: 2026-09-12 MSDS 관리대장에 사용자 제공 참고양식 기준 항목 추가(유해성분류, 사용자정보(회사명/공종/장소), 관리책임자(정/부), 현장반입일, MSDS자료 비치여부, 관리요령, 경고표지(GHS 그림문자 9종)/신호어) 및 전용 엑셀 서식(_buildMsdsWorkbook, 2단 그룹헤더) 신설. 같은 릴리스에서 전 모듈 공통 엑셀 출력(_buildGenericWorkbook)·법정회의점검 출력의 "사업장명" 라벨이 연번용 좁은 열(너비5)에 끼어 "사업/장명"으로 줄바꿈되던 표시 오류 수정, 법정검사/설비관리/안전관리조직도/비상연락망 4개 모듈이 서식 없는 단순 CSV로만 내보내지던 문제(EXCEL_COLUMNS 누락) 보완. / v26: 2026-09-12 안전교육일지에 사용자 제공 참고양식 기준 항목 추가(교육구분 체크박스, 교육장소/교육시간/교육과목/교육내용, 교육실시자 직책·성명, 교육 미실시 사유) 및 전용 엑셀 서식(_buildEduWorkbook, 참석자·미참석자 명단 및 서명·사진첨부 포함) 신설. / v25: 2026-09-12 TBM일지에 사용자 제공 참고양식 기준 항목 추가(시공방법/시공순서/주의사항/기타사항, 관련 MSDS 해당물질, 위험요인-안전대책 반복쌍) 및 전용 엑셀 서식(_buildTbmWorkbook, 참석자 서명 포함) 신설. / v24: 2026-09-12 작업허가서(PTW)에 사용자 제공 참고양식 기준 항목 추가(공사명/작업신청자/작업인원/관리감독자/안전관리자/화기감시자/비상연락, 가스측정기록, 작업자명단, 4단계 결재 메모) 및 전용 엑셀 서식(가스측정표·근로자명단표·4단계결재란 포함) 신설. / v23: 2026-09-12 내비게이션 구조 개편 — 하단 탭 "법규체크"를 "대시보드"로 교체(기존 안전모듈 내부 대시보드를 최상위 탭으로 승격), 법규체크는 안전모듈 서브탭으로 이동. "오늘 반드시 처리해야 할 업무"에 [일일]/[주간] 등 미체크 반복업무도 포함. 대시보드 카드 우선순위 재정렬 및 법정검사/설비/조직도/비상연락망 카드 추가. 엑셀 출력 서식 품질 개선 — 사업장명(siteInfo) 설정 신설 및 전 모듈 공통 엑셀 출력물 상단에 사업장명·결재란(담당/검토/승인) 추가, 법정회의·점검 전용 서식에도 동일 반영. / v22: 법정검사(안전검사)/설비관리/안전관리조직도/비상연락망 4개 모듈 추가 + CAPA 생성 시 전체 모듈 등록·수정 모달이 깨지던 ATTACHMENT_ENTITY_TYPES 참조 오류 수정(서버 폐기 전환 때 남은 죽은 코드) + 85개 법정 체크리스트 누락 항목 2개 보완(안전검사, 안전보건현황공시) + 반복위험요인 메뉴가 안 열리던 버그 수정 / v21: 2026-09-11 CAPA 상태 7단계→3단계(등록/조치중/완료) 단순화 — 1인 사용 앱에서 본인이 본인에게 결재하는 구조가 무의미해 정리. 옛 상태값은 _legacyStatus에 보존. / v1: 버전 관리 이전의 초기 데이터 구조 (기존 사용자 데이터) / v2: 버전 관리 도입 / v3: 일지 메모 기능 추가 / v4: TBM 일지 기능 추가 / v5: 법정선임 관리 기능 추가 / v6: PPE(개인보호구) 관리 기능 추가 / v7: 협력업체 관리 기능 추가 / v8: 산업재해(사고) 관리 기능 추가 / v9: 안전의 소리함(종사자 의견청취) 기능 추가 / v10: 위험성평가 가능성·중대성(개선전/후) 및 안전보건조치 위반사항 필드 추가 / v11: 법정회의·점검(안전보건협의체/산업안전보건위원회/순회점검/합동점검) 기능 추가 / v12: 위험성평가·법정회의점검 첨부사진 개선전/후 2장으로 확장 / v13: CAPA(개선조치) 독립 객체 도입 — 위험성평가/사고/아차사고/법정회의점검에서 발생한 조치사항을 자체 id·상태(등록→조치중→완료요청→검증중→승인/반려→종결)·조치전후 사진을 가진 별도 레코드로 관리 / v14: Core 엔진 강화 — 감사로그(auditLog)·전문 ID 채번 카운터(idCounters)·오류 로그(errorLog) 추가. 기존 레코드의 id는 전혀 바꾸지 않으며, 신규 등록 건부터 RISK-2026-000001 형식의 ID가 적용됩니다. / v15: 협력업체 드릴다운 — 위험성평가/사고/아차사고/TBM/교육/법정회의점검/PTW 7개 모듈에 "관련 협력업체" 필드 추가(빈 값으로 시작, 기존 항목은 전부 "해당없음"으로 간주됨). 협력업체 안전점수 KPI 계산의 기준이 됩니다. / v16: 위험성평가 재평가 연결(previousAssessmentId) 및 아차사고 "발생장소" 필드 추가. 반복위험 감지·장소별 분석의 기준이 됩니다. / v17: 안전교육에 참석자/미참석자 명단(attendeeList/absenteeList)·다음 교육 예정일(nextEduDate)·사진(photo) 필드 추가. 기존 요약 문자열(attendees)은 그대로 보존됩니다. / v18: PTW(작업허가서)에 승인 워크플로우 상태(등록→위험확인중→승인대기→승인됨→작업중→종료)와 작업예정일 필드 추가. 기존 approver 필드에 값이 있으면 "승인됨"으로, 없으면 "등록"으로 간주합니다(추측이 아니라 화면에 이미 쓰이던 "미승인/승인자 있음" 구분을 그대로 승계). / v19: 안전모듈 메뉴 순서(safetyMenuOrder) 추가 — 사용자가 메뉴 순서를 직접 편집할 수 있게 되어, 그 순서를 기억합니다. 기존 사용자는 기존 화면과 동일한 기본 순서로 시작합니다. / v20: 전체 점검 중 발견한 버그 수정 — MSDS 첨부파일(fileData/fileName/fileSize)이 입력창은 있었지만 저장되지 않던 것을 고쳤고, 화면에 전혀 쓰이지 않던 고정값 pictograms 필드를 정리했습니다.
 
         const MIGRATIONS = {
             // v1 -> v2 : 버전 관리 체계 도입. 기존 필드는 손대지 않고 버전 표식만 기록한다.
@@ -6884,7 +6565,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                             <div class="grid grid-cols-2 gap-2">
                                 <div class="space-y-1">
                                     <label class="font-bold text-slate-500 text-[10px]">개선 전 사진</label>
-                                    <input type="file" id="f-risk-photo-before" accept="image/*" capture="environment" onchange="SafetyModule.handleRiskPhotoSelect(event, 'before')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <input type="file" id="f-risk-photo-before" accept="image/*" onchange="SafetyModule.handleRiskPhotoSelect(event, 'before')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
                                     <div id="f-risk-photo-before-preview-wrap" class="${this.riskPhotoDataBefore ? '' : 'hidden'} relative rounded-xl overflow-hidden border border-slate-200 h-24 bg-slate-900 mt-1">
                                         <img id="f-risk-photo-before-preview" src="${this.riskPhotoDataBefore || ''}" class="w-full h-full object-cover" alt="개선 전 사진 미리보기">
                                         <button type="button" onclick="SafetyModule.openPhotoMarkerFor('f-risk-photo-before-preview', 'riskPhotoDataBefore')" class="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 hover:bg-black/80 text-white text-[10px] font-bold rounded">🖊 마킹</button>
@@ -6893,7 +6574,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                                 </div>
                                 <div class="space-y-1">
                                     <label class="font-bold text-slate-500 text-[10px]">개선 후 사진</label>
-                                    <input type="file" id="f-risk-photo-after" accept="image/*" capture="environment" onchange="SafetyModule.handleRiskPhotoSelect(event, 'after')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <input type="file" id="f-risk-photo-after" accept="image/*" onchange="SafetyModule.handleRiskPhotoSelect(event, 'after')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
                                     <div id="f-risk-photo-after-preview-wrap" class="${this.riskPhotoDataAfter ? '' : 'hidden'} relative rounded-xl overflow-hidden border border-slate-200 h-24 bg-slate-900 mt-1">
                                         <img id="f-risk-photo-after-preview" src="${this.riskPhotoDataAfter || ''}" class="w-full h-full object-cover" alt="개선 후 사진 미리보기">
                                         <button type="button" onclick="SafetyModule.openPhotoMarkerFor('f-risk-photo-after-preview', 'riskPhotoDataAfter')" class="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 hover:bg-black/80 text-white text-[10px] font-bold rounded">🖊 마킹</button>
@@ -7176,7 +6857,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                         </div>
                         <div class="space-y-1">
                             <label class="font-bold text-slate-600">교육사진</label>
-                            <input type="file" id="f-edu-photo" accept="image/*" capture="environment" onchange="SafetyModule.handleGenericPhotoSelect(event, 'eduPhotoData')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
+                            <input type="file" id="f-edu-photo" accept="image/*" onchange="SafetyModule.handleGenericPhotoSelect(event, 'eduPhotoData')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
                             <div id="eduPhotoData-preview-wrap" class="${this.eduPhotoData ? '' : 'hidden'} relative rounded-xl overflow-hidden border border-slate-200 h-24 bg-slate-900 mt-1">
                                 <img id="eduPhotoData-preview" src="${this.eduPhotoData || ''}" class="w-full h-full object-cover" alt="교육 사진 미리보기">
                                 <button type="button" onclick="SafetyModule.openPhotoMarkerFor('eduPhotoData-preview', 'eduPhotoData')" class="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 hover:bg-black/80 text-white text-[10px] font-bold rounded">🖊 마킹</button>
@@ -7322,7 +7003,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                         </div>
                         <div class="space-y-1">
                             <label class="font-bold text-slate-600">사진</label>
-                            <input type="file" id="f-nm-photo" accept="image/*" capture="environment" onchange="SafetyModule.handleGenericPhotoSelect(event, 'nmPhotoData')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
+                            <input type="file" id="f-nm-photo" accept="image/*" onchange="SafetyModule.handleGenericPhotoSelect(event, 'nmPhotoData')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
                             <div id="nmPhotoData-preview-wrap" class="${this.nmPhotoData ? '' : 'hidden'} relative rounded-xl overflow-hidden border border-slate-200 h-24 bg-slate-900 mt-1">
                                 <img id="nmPhotoData-preview" src="${this.nmPhotoData || ''}" class="w-full h-full object-cover" alt="사진 미리보기">
                                 <button type="button" onclick="SafetyModule.openPhotoMarkerFor('nmPhotoData-preview', 'nmPhotoData')" class="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 hover:bg-black/80 text-white text-[10px] font-bold rounded">🖊 마킹</button>
@@ -7384,7 +7065,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                             <div class="grid grid-cols-2 gap-2">
                                 <div class="space-y-1">
                                     <label class="font-bold text-slate-500 text-[10px]">개선 전 사진 <span class="font-normal text-slate-400">(지적사항)</span></label>
-                                    <input type="file" id="f-lm-photo-before" accept="image/*" capture="environment" onchange="SafetyModule.handleLegalPhotoSelect(event, 'before')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <input type="file" id="f-lm-photo-before" accept="image/*" onchange="SafetyModule.handleLegalPhotoSelect(event, 'before')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
                                     <div id="f-lm-photo-before-preview-wrap" class="${this.legalPhotoDataBefore ? '' : 'hidden'} relative rounded-xl overflow-hidden border border-slate-200 h-24 bg-slate-900 mt-1">
                                         <img id="f-lm-photo-before-preview" src="${this.legalPhotoDataBefore || ''}" class="w-full h-full object-cover" alt="개선 전 사진 미리보기">
                                         <button type="button" onclick="SafetyModule.openPhotoMarkerFor('f-lm-photo-before-preview', 'legalPhotoDataBefore')" class="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 hover:bg-black/80 text-white text-[10px] font-bold rounded">🖊 마킹</button>
@@ -7393,7 +7074,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                                 </div>
                                 <div class="space-y-1">
                                     <label class="font-bold text-slate-500 text-[10px]">개선 후 사진 <span class="font-normal text-slate-400">(조치완료)</span></label>
-                                    <input type="file" id="f-lm-photo-after" accept="image/*" capture="environment" onchange="SafetyModule.handleLegalPhotoSelect(event, 'after')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <input type="file" id="f-lm-photo-after" accept="image/*" onchange="SafetyModule.handleLegalPhotoSelect(event, 'after')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
                                     <div id="f-lm-photo-after-preview-wrap" class="${this.legalPhotoDataAfter ? '' : 'hidden'} relative rounded-xl overflow-hidden border border-slate-200 h-24 bg-slate-900 mt-1">
                                         <img id="f-lm-photo-after-preview" src="${this.legalPhotoDataAfter || ''}" class="w-full h-full object-cover" alt="개선 후 사진 미리보기">
                                         <button type="button" onclick="SafetyModule.openPhotoMarkerFor('f-lm-photo-after-preview', 'legalPhotoDataAfter')" class="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 hover:bg-black/80 text-white text-[10px] font-bold rounded">🖊 마킹</button>
@@ -7429,7 +7110,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                             <div class="grid grid-cols-2 gap-2">
                                 <div class="space-y-1">
                                     <label class="font-bold text-slate-500 text-[10px]">조치 전</label>
-                                    <input type="file" id="f-capa-photo-before" accept="image/*" capture="environment" onchange="SafetyModule.handleCapaPhotoSelect(event, 'before')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <input type="file" id="f-capa-photo-before" accept="image/*" onchange="SafetyModule.handleCapaPhotoSelect(event, 'before')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
                                     <div id="f-capa-photo-before-preview-wrap" class="${this.capaPhotoDataBefore ? '' : 'hidden'} relative rounded-xl overflow-hidden border border-slate-200 h-24 bg-slate-900 mt-1">
                                         <img id="f-capa-photo-before-preview" src="${this.capaPhotoDataBefore || ''}" class="w-full h-full object-cover" alt="조치 전 사진 미리보기">
                                         <button type="button" onclick="SafetyModule.openPhotoMarkerFor('f-capa-photo-before-preview', 'capaPhotoDataBefore')" class="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 hover:bg-black/80 text-white text-[10px] font-bold rounded">🖊 마킹</button>
@@ -7438,7 +7119,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                                 </div>
                                 <div class="space-y-1">
                                     <label class="font-bold text-slate-500 text-[10px]">조치 후</label>
-                                    <input type="file" id="f-capa-photo-after" accept="image/*" capture="environment" onchange="SafetyModule.handleCapaPhotoSelect(event, 'after')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
+                                    <input type="file" id="f-capa-photo-after" accept="image/*" onchange="SafetyModule.handleCapaPhotoSelect(event, 'after')" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
                                     <div id="f-capa-photo-after-preview-wrap" class="${this.capaPhotoDataAfter ? '' : 'hidden'} relative rounded-xl overflow-hidden border border-slate-200 h-24 bg-slate-900 mt-1">
                                         <img id="f-capa-photo-after-preview" src="${this.capaPhotoDataAfter || ''}" class="w-full h-full object-cover" alt="조치 후 사진 미리보기">
                                         <button type="button" onclick="SafetyModule.openPhotoMarkerFor('f-capa-photo-after-preview', 'capaPhotoDataAfter')" class="absolute bottom-1 left-1 px-1.5 py-0.5 bg-black/60 hover:bg-black/80 text-white text-[10px] font-bold rounded">🖊 마킹</button>
@@ -9131,16 +8812,14 @@ ${continueFrom}
                 this._xlsxBox(ws, 2, mid + 1, 2, mid + 1, '출력정보', { bold: true, fill: 'FFE2E8F0' });
                 this._xlsxBox(ws, 2, mid + 2, 2, NCOL, `출력일자 ${todayStr} · 총 ${items.length}건`, { align: 'left', size: 10 });
 
-                const signCols = 3, signStart = NCOL - signCols + 1;
-                ws.getRow(3).height = 18;
-                this._xlsxBox(ws, 3, 1, 3, signStart - 1, '결        재', { bold: true, fill: 'FFE2E8F0' });
-                ['담당', '검토', '승인'].forEach((lb, i) => this._xlsxCell(ws, 3, signStart + i, lb, { bold: true, fill: 'FFE2E8F0' }));
-                ws.getRow(4).height = 34;
-                const authorLine = (State.weeklyLogMeta && State.weeklyLogMeta.author) || '';
-                const deptLine = (State.weeklyLogMeta && State.weeklyLogMeta.dept) || '';
-                const authorText = authorLine ? `작성: ${authorLine}${deptLine ? ` (${deptLine})` : ''}` : '(서명란)';
-                this._xlsxBox(ws, 4, 1, 4, signStart - 1, authorText, { align: 'left', size: 9.5, fontColor: authorLine ? 'FF1E293B' : 'FF94A3B8', italic: !authorLine });
-                for (let i = 0; i < signCols; i++) this._xlsxCell(ws, 4, signStart + i, '', {});
+                // v34: 여기 있던 "결재(담당/검토/승인)" 3칸 서명란을 제거했습니다. 이 표는
+                // 연번·위험등급 등 원래 있던 19개 열 폭(9.5~28 등, 서로 크게 다름)을 그대로
+                // 재사용해 뒤쪽 3개 열(관리요령·첨부파일·비고 자리)에 서명칸을 끼워넣는 방식
+                // 이었는데, 그 3칸의 폭이 28/14/16으로 서로 크게 달라 서명란이 고르지 않고
+                // 부자연스럽게 보인다는 지적을 받았습니다. 위험성평가(v22/v31)에서 이미 같은
+                // 이유로 결재란을 빼고 사업장명만 남긴 것과 동일한 판단으로, 여기서도 결재란
+                // 자체를 없앴습니다(작성자 정보가 필요하면 상단 "출력정보" 칸에 이미 출력일자·
+                // 총 건수가 표시되고 있어 별도 서명란 없이도 문서 출처 확인은 가능합니다).
 
                 // --- 2단 그룹 헤더 (사용자 정보 / 관리책임자) ---
                 ws.getRow(5).height = 16;
@@ -9384,18 +9063,21 @@ ${continueFrom}
                 printWin2.document.write(docHTML);
                 printWin2.document.close();
             },
-            // 2026-08-30: PTW도 마찬가지로 인쇄/PDF가 없었습니다. 상단에 진위확인 QR코드를
-            // 넣습니다 - 스캔하면 서버의 공개 검증페이지(GET /verify/ptw/:id, 로그인 불필요)로
-            // 연결되어, 감독관 등 제3자가 종이 문서가 위조되지 않았는지 즉석에서 확인할 수
-            // 있습니다. 서버에 아직 동기화되지 않은(로컬에서만 만든) PTW는 검증 URL 자체가
-            // 의미 없으므로 QR을 생략하고 그 사실을 안내합니다.
+            // 2026-08-30: PTW도 마찬가지로 인쇄/PDF가 없었습니다. 원래는 상단에 진위확인 QR코드를
+            // 넣어, 스캔하면 서버의 공개 검증페이지로 연결되어 감독관 등 제3자가 종이 문서 위조
+            // 여부를 확인할 수 있게 하려 했습니다.
+            // 2026-09-11: 서버 연동을 완전히 제거하면서 canVerify를 false로 고정해뒀는데(진위확인
+            // QR은 서버가 있어야 동작), 그때 "서버에 아직 동기화되지 않았으니 서버 연결 후 다시
+            // 인쇄해달라"는 안내문과 QR 표시용 빈 자리는 그대로 남아있었습니다. 이 앱은 이제
+            // 영구적으로 서버 없는 오프라인 전용 구조라 "서버 연결 후" 재인쇄는 애초에 불가능한
+            // 안내였고, canVerify가 항상 false라 이 문구가 인쇄할 때마다 매번 나오고 있었습니다.
+            // 전체 코드 점검 중 발견 — 실제 서비스 인쇄물(작업허가서 원본)에 사용자를 혼란시키는
+            // 문구가 계속 찍히는 것은 심각한 문제라 판단해, 진위확인 QR 기능 자체를 제거하고
+            // 평범하게 바로 인쇄되도록 정리함.
             printPTW(id) {
                 const item = (State.safetyData.ptw || []).find(i => i.id === id);
                 if (!item) { Toast.show('항목을 찾을 수 없습니다.', 'error'); return; }
                 const esc = (s) => Utils.escapeHTML(String(s == null ? '' : s));
-                // 2026-09-11: 서버 연동 제거. 진위확인 QR은 서버가 있어야 동작하므로 사용하지 않는다.
-                const canVerify = false;
-                const verifyUrl = '';
 
                 const docHTML2 = `<!DOCTYPE html>
 <html lang="ko"><head><meta charset="UTF-8"><title>작업허가서(PTW)</title>
@@ -9404,8 +9086,6 @@ ${continueFrom}
   .head-row { display: flex; justify-content: space-between; align-items: flex-start; }
   h1 { font-size: 20px; margin-bottom: 4px; }
   .subtitle { color: #64748b; font-size: 12px; margin-bottom: 20px; }
-  #qrcode { text-align: center; }
-  #qrcode p { font-size: 9px; color: #94a3b8; margin: 4px 0 0; width: 100px; }
   table { width: 100%; border-collapse: collapse; font-size: 12px; }
   th, td { border: 1px solid #cbd5e1; padding: 8px; text-align: left; }
   th { background: #f1f5f9; }
@@ -9419,7 +9099,6 @@ ${continueFrom}
       <h1>작업허가서 (Permit To Work)</h1>
       <div class="subtitle">문서번호: ${esc(item.id)}</div>
     </div>
-    ${canVerify ? `<div id="qrcode"><p>QR을 스캔하면<br>진위 확인이 가능합니다</p></div>` : ''}
   </div>
   <table>
     <tr><th style="width:110px;">작업명</th><td colspan="3">${esc(item.title)}</td></tr>
@@ -9437,10 +9116,8 @@ ${continueFrom}
       <tr><td style="height:50px;"></td><td style="height:50px;"></td><td style="height:50px;"></td></tr>
     </table>
   </div>
-  ${!canVerify ? `<p style="font-size:10px;color:#dc2626;margin-top:16px;">※ 이 문서는 아직 서버에 동기화되지 않아 QR 진위확인이 포함되지 않았습니다. 서버 연결 후 다시 인쇄해주세요.</p>` : ''}
   <script>
-    ${canVerify ? `new QRCode(document.getElementById('qrcode'), { text: ${JSON.stringify(verifyUrl)}, width: 100, height: 100 });` : ''}
-    window.onload = () => { setTimeout(() => window.print(), ${canVerify ? '300' : '0'}); };
+    window.onload = () => { window.print(); };
   <\/script>
 </body></html>`;
 
@@ -9596,15 +9273,17 @@ ${continueFrom}
                 // 이 서식에서는 넣지 않고 사업장명만 남깁니다 — 다른 모듈(CAPA·MSDS·PTW 등)에는
                 // 여전히 결재란이 있으니, 위험성평가만 인쇄 후 별도 결재라인이 필요하시면
                 // 말씀해주세요(예: 페이지 맨 아래에 한 줄짜리 서명란 추가 등).
+                // v34: "사업장명" 단독 줄 + "평가일자/작성자" 줄, 이렇게 2줄로 나눠져 있던 것을,
+                // "평가일자·작성자 값 뒤에 남는 빈 공간이 부자연스럽다"는 지적을 받아 한 줄로
+                // 합침. 평가일자·(작성자 또는 목록출력 시 총 건수)·사업장명 세 항목을 12개 열에
+                // 4칸씩 고르게 배분해 빈 공간 없이 채움.
                 ws.getRow(2).height = 20;
-                box(2, 1, 2, 2, '사업장명', { bold: true, fill: 'FFDCE6F1' });
-                box(2, 3, 2, 12, siteName, { align: 'left', size: 10, bold: true });
-
-                ws.getRow(3).height = 20;
-                box(3, 1, 3, 2, '평가일자', { bold: true, fill: 'FFDCE6F1' });
-                box(3, 3, 3, 4, headerInfo.dateValue || '', { size: 10 });
-                box(3, 5, 3, 6, headerInfo.rightLabel || '작성자', { bold: true, fill: 'FFDCE6F1' });
-                box(3, 7, 3, 12, headerInfo.rightValue || '', { align: 'left', size: 10 });
+                box(2, 1, 2, 2, '평가일자', { bold: true, fill: 'FFDCE6F1' });
+                box(2, 3, 2, 4, headerInfo.dateValue || '', { size: 10 });
+                box(2, 5, 2, 6, headerInfo.rightLabel || '작성자', { bold: true, fill: 'FFDCE6F1' });
+                box(2, 7, 2, 8, headerInfo.rightValue || '', { align: 'left', size: 10 });
+                box(2, 9, 2, 10, '사업장명', { bold: true, fill: 'FFDCE6F1' });
+                box(2, 11, 2, 12, siteName, { align: 'left', size: 10, bold: true });
 
                 // 【위험성 평가기준】 매트릭스 + 관리기준표
                 ws.getRow(5).height = 20;
@@ -11304,16 +10983,26 @@ ${continueFrom}
                     Toast.show('삭제되었습니다.', 'success');
                 });
             },
-            handlePhotoSelect(e) {
-                const file = e.target.files[0];
+            // v5.25: 다른 모든 사진첨부(위험성평가/CAPA/법정회의점검/공용)는 Utils.readAndCompressImage()로
+            // 압축(최대 1280px, 품질 0.82)해서 저장하는데, 이 "위험신고" 빠른입력 화면만 압축 없이
+            // FileReader로 원본 사진(휴대폰 카메라 사진은 보통 3~10MB)을 그대로 localStorage에 저장하고
+            // 있었음(전체 코드 점검 중 발견). 위험신고가 가장 자주 쓰이는 사진첨부 진입점이라, 압축 누락이
+            // 다른 모듈보다 훨씬 빠르게 localStorage 용량 한도(브라우저별 약 5~10MB)에 부딪히는 원인이 될 수
+            // 있어 다른 모듈과 동일한 압축 로직으로 통일함. 실패 시(예: 손상된 파일) 조용히 무시되지 않고
+            // Toast로 안내하도록 함께 개선.
+            async handlePhotoSelect(e) {
+                const file = e.target.files && e.target.files[0];
                 if (!file) return;
-                const reader = new FileReader();
-                reader.onload = function(evt) {
-                    document.getElementById('photo-preview-img').src = evt.target.result;
+                try {
+                    const { dataURL } = await Utils.readAndCompressImage(file);
+                    document.getElementById('photo-preview-img').src = dataURL;
                     document.getElementById('photo-preview-container').classList.remove('hidden');
                     document.getElementById('photo-btn-text').textContent = file.name;
-                };
-                reader.readAsDataURL(file);
+                } catch (err) {
+                    Toast.show('사진을 불러오지 못했습니다: ' + err.message, 'error');
+                } finally {
+                    e.target.value = '';
+                }
             },
             clearReportPhoto() {
                 document.getElementById('photo-preview-img').src = '';
@@ -12045,8 +11734,8 @@ ${continueFrom}
         // 항상 정상적으로 찾을 수 있도록 보장합니다. 반드시 모든 const 모듈 선언 이후에 위치
         // (TDZ 오류 방지). devtools 콘솔 디버깅에도 유용합니다.
         Object.assign(window, {
-            VoiceInput, QRScanner, SiteMapMarker, LocationUtils, QuickReport,
-            ImageUtils, ReportPrinter, PWAInstall
+            VoiceInput, LocationUtils,
+            ReportPrinter, PWAInstall
         });
 
         // 2026-09-12: 스플래시 화면(로그인 화면 대체) 감추기.
