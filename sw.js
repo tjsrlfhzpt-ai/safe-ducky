@@ -9,7 +9,7 @@
    버전을 바꾸지 않으면 사용자 기기에 예전 버전이 계속 캐시된 채로
    남아 "업데이트했는데 옛날 화면이 보이는" 문제가 발생합니다.
    ============================================================ */
-const CACHE_VERSION = 'safe-ducky-shell-v21.0.0';
+const CACHE_VERSION = 'safe-ducky-shell-v25.0.0';
 
 const CORE_ASSETS = [
   './',
@@ -38,6 +38,27 @@ const CORE_ASSETS = [
   './assets/safeducky/empty-equipment.jpg',
   './assets/safeducky/empty-orgchart.jpg',
   './assets/safeducky/empty-emergency.jpg',
+  // 2026-09-13: v5.31 안전모듈 메뉴 아이콘(사용자 제공 마스코트 아이콘 자료, 20개) 오프라인 캐싱 추가
+  './assets/safeducky/menu-icons/menu-capa.png',
+  './assets/safeducky/menu-icons/menu-risk.png',
+  './assets/safeducky/menu-icons/menu-accident.png',
+  './assets/safeducky/menu-icons/menu-msds.png',
+  './assets/safeducky/menu-icons/menu-health.png',
+  './assets/safeducky/menu-icons/menu-ptw.png',
+  './assets/safeducky/menu-icons/menu-edu.png',
+  './assets/safeducky/menu-icons/menu-tbm.png',
+  './assets/safeducky/menu-icons/menu-appoint.png',
+  './assets/safeducky/menu-icons/menu-legalmeet.png',
+  './assets/safeducky/menu-icons/menu-ppe.png',
+  './assets/safeducky/menu-icons/menu-contractor.png',
+  './assets/safeducky/menu-icons/menu-nearmiss.png',
+  './assets/safeducky/menu-icons/menu-voice.png',
+  './assets/safeducky/menu-icons/menu-statutory.png',
+  './assets/safeducky/menu-icons/menu-equipment.png',
+  './assets/safeducky/menu-icons/menu-orgchart.png',
+  './assets/safeducky/menu-icons/menu-emergency.png',
+  './assets/safeducky/menu-icons/menu-ai.png',
+  './assets/safeducky/menu-icons/menu-stats.png',
   'https://cdn.tailwindcss.com',
   'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
   'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
