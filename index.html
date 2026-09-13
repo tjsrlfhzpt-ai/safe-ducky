@@ -110,7 +110,26 @@
         }
         .no-scrollbar::-webkit-scrollbar { display: none; }
         .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
-        
+
+        /* v5.30: 카드 하단의 아이콘/버튼 줄(인쇄·엑셀·공유·복사·CAPA·수정·삭제 등)이 좁은 화면에서
+           다 들어가지 못할 때, 버튼 안 글자가 두 줄로 접히면서 버튼이 세로로 길쭉해지는 문제가
+           있었습니다("아이콘이 좁아져 세로로 변한다"는 실기기 피드백). 글자 크기를 화면 너비에
+           맞춰 자동으로 줄이는 것은 표준 CSS만으로는 신뢰성 있게 지원되지 않아(기기·브라우저마다
+           동작이 다름), 이 앱에 이미 쓰이고 있는 "가로 스크롤 바"(예: 안전모듈 상단 메뉴바)와
+           동일한 방식으로 통일했습니다 — 글자는 항상 한 줄로 유지하고, 다 못 들어가면 그 버튼
+           줄만 가로로 스크롤됩니다(화면 전체가 옆으로 밀리지 않음). class="flex gap-1"류로 만든
+           모든 버튼 줄에 공통 적용됩니다. */
+        .flex.gap-1, .flex.gap-1\.5 {
+            overflow-x: auto;
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+        }
+        .flex.gap-1::-webkit-scrollbar, .flex.gap-1\.5::-webkit-scrollbar { display: none; }
+        .flex.gap-1 > button, .flex.gap-1\.5 > button, .flex.gap-2 > button {
+            white-space: nowrap;
+            flex-shrink: 0;
+        }
+
         .app-shell {
             width: 100%;
             max-width: 430px;
@@ -1213,13 +1232,18 @@
                         <h3 class="text-xs font-bold text-slate-700">데이터 백업 및 복원 (JSON)</h3>
                         <p class="text-[11px] text-slate-500 leading-tight">앱의 모든 데이터를 파일로 저장하거나 백업 파일에서 안전하게 복원합니다. 이 화면과 각 모듈의 "📊 엑셀출력" 버튼은, 지원되는 기기에서는 다운로드 대신 카카오톡·이메일 등으로 바로 보낼 수 있는 공유 창이 먼저 열립니다.</p>
                         <div id="last-backup-indicator" class="text-[10px] text-slate-400"></div>
-                        <div class="grid grid-cols-2 gap-2 pt-1">
-                            <button onclick="Actions.exportBackupJSON()" class="py-2 px-3 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1">
-                                📥 백업 다운로드
+                        <!-- v5.30: "백업 다운로드 옆에도 공유하기 버튼이 있으면 좋겠다"는 요청으로
+                             다운로드 버튼 옆에 공유 전용 버튼을 추가했습니다. -->
+                        <div class="grid grid-cols-3 gap-2 pt-1">
+                            <button onclick="Actions.exportBackupJSON()" class="py-2 px-2 bg-slate-800 hover:bg-slate-900 text-white font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1">
+                                📥 다운로드
+                            </button>
+                            <button onclick="Actions.exportBackupJSON('share')" title="백업 파일 공유" class="py-2 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1">
+                                📤 공유
                             </button>
                             <input type="file" id="json-import-input" accept=".json" onchange="Actions.importBackupJSON(event)" class="hidden">
-                            <button onclick="document.getElementById('json-import-input').click()" class="py-2 px-3 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1">
-                                📤 백업 파일 복원
+                            <button onclick="document.getElementById('json-import-input').click()" class="py-2 px-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl transition-colors flex items-center justify-center gap-1">
+                                📁 복원
                             </button>
                         </div>
                     </div>
@@ -1254,16 +1278,21 @@
 
                     <div class="space-y-2">
                         <h3 class="text-xs font-bold text-slate-700">단일 HTML 내보내기</h3>
-                        <button onclick="Actions.exportSingleHTML()" class="w-full py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors">
-                            ⚡ 현재 앱 단일 파일 다운로드
-                        </button>
+                        <div class="grid grid-cols-3 gap-2">
+                            <button onclick="Actions.exportSingleHTML()" class="col-span-2 py-2.5 bg-slate-900 hover:bg-slate-800 text-white font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors">
+                                ⚡ 단일 파일 다운로드
+                            </button>
+                            <button onclick="Actions.exportSingleHTML('share')" title="단일 HTML 공유" class="py-2.5 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-xs rounded-xl flex items-center justify-center gap-1.5 transition-colors">
+                                📤 공유
+                            </button>
+                        </div>
                     </div>
                 </div>
 
                 <div class="bg-slate-100 rounded-2xl p-3.5 border border-slate-200 text-[11px] text-slate-600 space-y-1">
                     <div class="font-bold text-slate-800">SAFE DUCKY (세이프더키)</div>
                     <div>본 시스템은 KOSHA 가이드라인, 산업안전보건법 및 중대재해처벌법을 준수합니다.</div>
-                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200 mt-2">v5.29 · © 2026 SAFE DUCKY</div>
+                    <div class="text-[10px] text-slate-400 pt-1 border-t border-slate-200 mt-2">v5.30 · © 2026 SAFE DUCKY</div>
                 </div>
             </section>
 
@@ -1438,7 +1467,7 @@
                     <button onclick="Actions.clearAppCache()" class="w-full py-2 bg-slate-100 hover:bg-slate-200 text-slate-700 font-bold text-[11px] rounded-xl transition-colors">🧹 캐시 삭제 후 새로고침</button>
                     <p class="text-[10px] text-slate-400 leading-tight">등록된 위험성평가·업무 등 데이터는 지워지지 않습니다. 앱 화면 파일만 다시 받아와 오래된 화면이 남아있는 문제를 해결할 때 씁니다.</p>
                 </div>
-                <p class="text-[10px] text-slate-400 leading-tight pt-2 border-t border-slate-100">사업장 정보·API 키·백업/복원·감사로그 등은 하단 <b>마이페이지</b> 탭에서 관리합니다.<br>SAFE DUCKY v5.29 · DB v38</p>
+                <p class="text-[10px] text-slate-400 leading-tight pt-2 border-t border-slate-100">사업장 정보·API 키·백업/복원·감사로그 등은 하단 <b>마이페이지</b> 탭에서 관리합니다.<br>SAFE DUCKY v5.30 · DB v39</p>
             </div>
         </div>
 
@@ -1756,6 +1785,18 @@
                 legalcheck: 'assets/safeducky/empty-history.jpg',
                 legalmeet: 'assets/safeducky/empty-history.jpg',
                 statutory: 'assets/safeducky/empty-history.jpg',
+                // v5.30: 사용자가 직접 만들어 제공한 마스크 캐릭터 아이콘 세트에서, 그동안
+                // 전용 그림 없이 기본 그림(empty-generic.jpg)으로만 표시되던 8개 모듈에
+                // 어울리는 그림을 골라 새로 추가했습니다(각 그림의 주제 매칭 근거는
+                // v5.30 업데이트 보고서 참고).
+                accident: 'assets/safeducky/empty-accident.jpg',
+                tbm: 'assets/safeducky/empty-tbm.jpg',
+                emergency: 'assets/safeducky/empty-emergency.jpg',
+                orgchart: 'assets/safeducky/empty-orgchart.jpg',
+                nearmiss: 'assets/safeducky/empty-nearmiss.jpg',
+                contractor: 'assets/safeducky/empty-contractor.jpg',
+                appoint: 'assets/safeducky/empty-appoint.jpg',
+                equipment: 'assets/safeducky/empty-equipment.jpg',
             },
             emptyStateCard(message, moduleKey) {
                 const src = this.EMPTY_STATE_ILLUSTRATIONS[moduleKey] || 'assets/safeducky/empty-generic.jpg';
@@ -1862,7 +1903,7 @@
 
                 const blob = new Blob([csvContent], { type: 'text/csv;charset=utf-8;' });
                 if (mode === 'share') {
-                    const result = await this.shareBlob(blob, `${filename}.csv`, 'text/csv;charset=utf-8;');
+                    const result = await this.shareBlob(blob, `${filename}.csv`, 'text/csv;charset=utf-8;', `${filename}.csv`);
                     if (result === 'shared') Toast.show(`${filename}.csv 공유를 완료했습니다.`, 'success');
                 } else {
                     this.downloadBlob(blob, `${filename}.csv`);
@@ -1935,21 +1976,42 @@
             // "공유" 전용 버튼에서만 씁니다. deliverBlob()과 달리 공유가 안 되면 조용히
             // 다운로드로 대체하지 않고, 왜 안 되는지를 토스트로 분명히 알려줍니다 — 사용자가
             // "공유 버튼을 눌렀는데 아무 반응이 없다/다운로드가 됐다"고 혼란스러워하지 않도록.
-            async shareBlob(blob, filename, mimeType) {
+            // v5.30: 실기기 테스트 결과 "돋보기 옆 공유(텍스트만 공유)는 성공했지만 위험성평가·
+            // 작업허가서·TBM 등 파일 공유는 거의 다 실패했다"는 제보를 받았습니다. 이는 브라우저의
+            // Web Share API가 "텍스트/URL 공유"(Level 1)는 폭넓게 지원해도 "파일 공유"(Level 2,
+            // canShare({files}))는 기기·브라우저·설치 방식(특히 홈화면에 추가한 PWA)에 따라
+            // 지원하지 않거나, MIME 타입에 따라 canShare가 false를 반환하는 경우가 실제로 있기
+            // 때문입니다. 두 가지 완화 조치를 추가했습니다:
+            // ① MIME 타입 재시도 — 정확한 타입(예: xlsx MIME)으로 canShare가 거부되면, 더 일반적인
+            //    타입(application/octet-stream, 타입 없음)으로 다시 시도합니다(기기에 따라 특정
+            //    MIME만 차단하고 일반 타입은 허용하는 경우가 있어 실제 성공률을 높일 수 있음).
+            // ② title/text 동봉 — 일부 기기(특히 카카오톡 등 수신 앱)는 파일만 있고 텍스트가 전혀
+            //    없는 공유 요청을 무시하거나 실패시키는 경우가 있어, 파일명 기반 안내 텍스트를
+            //    항상 함께 보냅니다.
+            // 그래도 안 되면(기기가 파일 공유 자체를 지원하지 않는 경우) 아래에서 실패 사유를
+            // 명확히 구분해 토스트로 알리고, "엑셀출력" 버튼(항상 보장되는 다운로드)으로 안내합니다.
+            async shareBlob(blob, filename, mimeType, shareText) {
+                const candidateTypes = [mimeType || blob.type, 'application/octet-stream', ''];
                 let file = null;
-                try { file = new File([blob], filename, { type: mimeType || blob.type }); } catch (e) { file = null; }
+                for (const t of candidateTypes) {
+                    let candidate;
+                    try { candidate = t ? new File([blob], filename, { type: t }) : new File([blob], filename); } catch (e) { continue; }
+                    if (navigator.canShare && navigator.canShare({ files: [candidate] })) { file = candidate; break; }
+                }
 
-                if (!file || !navigator.canShare || !navigator.canShare({ files: [file] })) {
-                    Toast.show('이 브라우저/기기에서는 파일 공유가 지원되지 않습니다. "엑셀출력" 버튼으로 다운로드해주세요.', 'error');
+                if (!file) {
+                    Toast.show('이 브라우저/기기에서는 파일 공유 자체가 지원되지 않습니다(기기 제한). "엑셀출력" 버튼으로 다운로드해주세요.', 'error');
                     return 'unsupported';
                 }
                 try {
-                    await navigator.share({ files: [file] });
+                    const payload = { files: [file] };
+                    if (shareText) { payload.title = shareText; payload.text = shareText; }
+                    await navigator.share(payload);
                     return 'shared';
                 } catch (e) {
                     if (e && e.name === 'AbortError') return 'cancelled';
                     console.error('[공유 실패]', e);
-                    Toast.show('공유에 실패했습니다. "엑셀출력" 버튼으로 다운로드해주세요.', 'error');
+                    Toast.show(`공유에 실패했습니다(${e && e.name ? e.name : '오류'}). "엑셀출력" 버튼으로 다운로드해주세요.`, 'error');
                     return 'failed';
                 }
             },
@@ -2178,6 +2240,49 @@
                     keys.forEach((k, i) => { obj[k] = parts[i] || ''; });
                     return obj;
                 });
+            },
+            // ============================================================
+            // 일반 첨부파일 (v5.30 신규) — 법정선임(선임서·자격증), 작업허가서(원본 서명지),
+            // 위험성평가 등에 "사진이 아닌 문서"(PDF)나 사진을 그대로 첨부할 수 있도록 만든
+            // 공용 유틸입니다. 기존 사진 첨부(readAndCompressImage)는 개선 전/후 비교용으로
+            // 압축·워터마크가 필요했지만, 여기서는 "원본 문서를 그대로 보관"하는 것이 목적이라
+            // 이미지도 압축하지 않고 원본 그대로 저장합니다(단, 용량 제한은 둡니다).
+            //
+            // 이 앱은 서버 없이 localStorage(기기당 보통 5~10MB)에만 저장되므로, 첨부파일이
+            // 누적되면 용량 초과로 "저장 실패"가 날 수 있습니다. 파일당 4MB로 제한해 그 위험을
+            // 낮췄지만, 사용자가 원본 문서를 다수 첨부하면 여전히 한계에 부딪힐 수 있다는 점은
+            // 명확히 밝혀둡니다(마이페이지의 저장공간 사용량 표시로 확인 가능).
+            ATTACHMENT_MAX_BYTES: 4 * 1024 * 1024, // 파일당 4MB
+            ATTACHMENT_ACCEPT: 'image/*,application/pdf',
+            readFileAsDataURL(file) {
+                return new Promise((resolve, reject) => {
+                    const reader = new FileReader();
+                    reader.onload = (e) => resolve(e.target.result);
+                    reader.onerror = () => reject(new Error('파일을 읽지 못했습니다.'));
+                    reader.readAsDataURL(file);
+                });
+            },
+            // 여러 파일을 순차 처리해 {name, type, size, dataUrl, addedAt} 배열로 반환합니다.
+            // 실패한 파일은 결과에서 제외하고 실패 사유를 onError로 알립니다(전체 첨부가 한
+            // 파일의 오류 때문에 통째로 실패하지 않도록).
+            async readAttachmentFiles(fileList, onError) {
+                const files = Array.from(fileList || []);
+                const results = [];
+                for (const file of files) {
+                    try {
+                        if (!file.type || !(file.type.startsWith('image/') || file.type === 'application/pdf')) {
+                            throw new Error(`"${file.name}"은 지원하지 않는 파일 형식입니다. 이미지 또는 PDF 파일만 첨부할 수 있습니다.`);
+                        }
+                        if (file.size > this.ATTACHMENT_MAX_BYTES) {
+                            throw new Error(`"${file.name}" 파일이 너무 큽니다(${(file.size / 1024 / 1024).toFixed(1)}MB). 4MB 이하 파일만 첨부할 수 있습니다.`);
+                        }
+                        const dataUrl = await this.readFileAsDataURL(file);
+                        results.push({ name: file.name, type: file.type, size: file.size, dataUrl, addedAt: new Date().toISOString() });
+                    } catch (err) {
+                        if (onError) onError(err.message);
+                    }
+                }
+                return results;
             }
         };
 
@@ -2226,9 +2331,11 @@
             const micBtnId = `mic-btn-${targetId}`;
             const langSelId = `mic-lang-${targetId}`;
             const statusId = `mic-status-${targetId}`;
-            // v5.29: opts.showLangSelect === false 인 곳(예: 위험신고)은 다국어 선택 UI 없이
-            // 한국어(또는 opts.lang)로 고정합니다 — 굳이 필요 없다는 사용자 피드백에 따른 조치.
-            const showLangSelect = opts.showLangSelect !== false;
+            // v5.30: 처음엔 위험신고 한 곳만 언어선택을 없앴는데, 실사용 결과 "CAPA·위험성평가
+            // 등록 등 다른 곳의 언어선택도 전부 필요 없다"는 피드백을 받아 기본값을 아예
+            // "언어선택 없음(한국어 고정)"으로 바꿨습니다. 다국어 인식 자체(엔진)는 남겨뒀으므로
+            // 나중에 특정 화면에서만 필요해지면 opts.showLangSelect: true로 그 화면만 되살릴 수 있습니다.
+            const showLangSelect = opts.showLangSelect === true;
 
             wrap.innerHTML = `
               <button type="button" id="${micBtnId}" class="w-8 h-8 flex-shrink-0 rounded-full bg-slate-800 hover:bg-slate-900 text-white flex items-center justify-center text-xs transition-all" title="음성으로 입력">🎙️</button>
@@ -3245,7 +3352,16 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
         // 규칙: 여기 등록되는 모든 migration 함수는 "필드 추가"만 하며,
         // 기존 필드 값은 절대 덮어쓰거나 삭제하지 않는다.
         // ============================================================
-        const DB_VERSION = 38; // v38: 2026-09-12 사용자 실기기 테스트 결과 v37의 "공유 우선,
+        const DB_VERSION = 39; // v39(v5.30): 2026-09-12 실기기 재테스트 결과 v38의 새 "공유"
+        // 버튼 자체도 위험성평가·작업허가·TBM 등 파일 공유가 대부분 실패한다는 제보 → MIME 타입
+        // 재시도(정확한 타입 실패 시 application/octet-stream·타입없음 순으로 재시도)와 title/text
+        // 동봉을 shareBlob()에 추가. 백업(JSON)·단일HTML 내보내기도 동일하게 다운로드/공유 버튼을
+        // 분리(exportBackupJSON·exportSingleHTML에 mode 파라미터 추가). 법정선임·작업허가·
+        // 위험성평가에 일반 첨부파일(사진/PDF) 기능 추가(attachments 필드, migration 39 참고).
+        // 그 외: 음성입력 언어선택 전체 제거(기본값 반전), PTW 인쇄 버튼 아이콘 전용화, 버튼 줄
+        // 세로 wrap 방지 CSS, 8개 모듈(사고·TBM·법정선임·협력업체·아차사고·설비·조직도·비상연락망)
+        // 데이터없음 화면에 전용 일러스트 추가.
+        // v38: 2026-09-12 사용자 실기기 테스트 결과 v37의 "공유 우선,
         // 실패시 자동 다운로드" 방식이 실제로는 공유가 안 뜨고 조용히 다운로드만 되어 혼란스럽다는
         // 제보 → "엑셀출력"(항상 다운로드 보장)과 "공유"(카카오톡 등, 실패 시 이유를 토스트로
         // 알림)를 별도 버튼으로 분리(_downloadWorkbook·_downloadRiskWorkbook·exportGeneralExcel·
@@ -3713,8 +3829,22 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                     if (data.siteInfo[f] === undefined) data.siteInfo[f] = '';
                 });
                 return data;
+            },
+            // v38 -> v39(v5.30) : 법정선임·작업허가(PTW)·위험성평가에 일반 첨부파일(사진/PDF —
+            // 선임서·자격증·서명된 원본 등) 필드를 추가. 기존 항목은 빈 배열로 시작하며,
+            // 화면 코드도 이미 attachments가 없을 때 빈 배열로 처리하도록 방어해두었지만
+            // (Utils.readAttachmentFiles 등), 저장된 데이터 자체에도 필드를 명시적으로
+            // 채워 넣어 다른 코드가 이 필드를 직접 참조하게 되어도 안전하도록 합니다.
+            39(data) {
+                data.safetyData = data.safetyData || {};
+                ['risk', 'ptw', 'appoint'].forEach(type => {
+                    (data.safetyData[type] || []).forEach(item => {
+                        if (!Array.isArray(item.attachments)) item.attachments = [];
+                    });
+                });
+                return data;
             }
-            // 다음 신규 기능이 추가될 때는 여기에 29(data){...} 형태로
+            // 다음 신규 기능이 추가될 때는 여기에 40(data){...} 형태로
             // "없으면 기본값 채우기" 로직만 추가한다. (예: data.employees = data.employees || [];)
         };
 
@@ -5784,6 +5914,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                             ${item.photoBefore ? `<div class="flex-1 min-w-0"><p class="text-[9px] text-slate-400 mb-0.5">개선 전</p><img src="${item.photoBefore}" class="w-full h-16 rounded-lg object-cover border border-slate-200" alt="개선 전 사진"></div>` : ''}
                             ${item.photoAfter ? `<div class="flex-1 min-w-0"><p class="text-[9px] text-slate-400 mb-0.5">개선 후</p><img src="${item.photoAfter}" class="w-full h-16 rounded-lg object-cover border border-slate-200" alt="개선 후 사진"></div>` : ''}
                         </div>` : ''}
+                        ${this.attachmentChipsReadonly('risk', item)}
                         <div class="flex justify-between items-center pt-1">
                             <span class="text-[10px] text-slate-500">확인 서명</span>
                             ${item.signature
@@ -5832,7 +5963,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                 }
 
                 if (items.length === 0) {
-                    listEl.innerHTML = Utils.emptyStateCard('등록된 사고(재해) 기록이 없습니다.');
+                    listEl.innerHTML = Utils.emptyStateCard('등록된 사고(재해) 기록이 없습니다.', 'accident');
                     return;
                 }
 
@@ -6000,6 +6131,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                             <div><b>작업자/책임자:</b> ${Utils.escapeHTML(item.worker || '-')} / ${Utils.escapeHTML(item.manager || '-')}</div>
                             <div><b>안전조치:</b> ${Utils.escapeHTML(item.measure || '-')}</div>
                         </div>
+                        ${SafetyModule.attachmentChipsReadonly('ptw', item)}
                         <div class="flex justify-between items-center pt-1">
                             <span class="text-[10px] text-slate-500">승인 서명</span>
                             ${item.signature
@@ -6012,7 +6144,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                             <div class="flex gap-1">
                                 ${nextStatus ? `<button onclick="SafetyModule.advancePtwStatus('${item.id}')" class="px-2.5 py-1 bg-emerald-600 hover:bg-emerald-700 text-white font-bold rounded-lg transition-colors">${nextStatus}로</button>` : ''}
                                 ${SafetyModule.capaButtonHtml('ptw', item.id)}
-                                <button onclick="SafetyModule.printPTW('${item.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg transition-colors">🖨️ 인쇄</button>
+                                <button onclick="SafetyModule.printPTW('${item.id}')" title="인쇄" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg transition-colors">🖨️</button>
                                 ${SafetyModule.itemExcelButtonHtml('ptw', item.id)}
                                 <button onclick="SafetyModule.openModal('ptw', '${item.id}')" class="px-2.5 py-1 bg-slate-100 hover:bg-slate-200 text-slate-800 font-bold rounded-lg transition-colors">수정</button>
                                 <button onclick="SafetyModule.deleteItem('ptw', '${item.id}')" class="px-2.5 py-1 bg-rose-50 hover:bg-rose-100 text-rose-600 font-bold rounded-lg transition-colors">삭제</button>
@@ -6069,7 +6201,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                 if (!listEl) return;
                 const items = (State.safetyData.tbm || []).slice().sort((a, b) => `${b.date}${b.time || ''}`.localeCompare(`${a.date}${a.time || ''}`));
                 if (items.length === 0) {
-                    listEl.innerHTML = Utils.emptyStateCard('등록된 TBM 일지가 없습니다.');
+                    listEl.innerHTML = Utils.emptyStateCard('등록된 TBM 일지가 없습니다.', 'tbm');
                     return;
                 }
                 listEl.innerHTML = items.map(item => {
@@ -6223,7 +6355,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                 if (!listEl) return;
                 const items = (State.safetyData.appoint || []).slice().sort((a, b) => (a.nextEduDate || '9999').localeCompare(b.nextEduDate || '9999'));
                 if (items.length === 0) {
-                    listEl.innerHTML = Utils.emptyStateCard('등록된 법정선임 정보가 없습니다.');
+                    listEl.innerHTML = Utils.emptyStateCard('등록된 법정선임 정보가 없습니다.', 'appoint');
                     return;
                 }
                 listEl.innerHTML = items.map(item => {
@@ -6244,6 +6376,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                             ${ddayBadge}
                         </div>
                         <p class="text-[11px] text-slate-600"><b>선임일:</b> ${Utils.escapeHTML(item.appointDate || '-')} · <b>다음 보수교육:</b> ${Utils.escapeHTML(item.nextEduDate || '미지정')}</p>
+                        ${SafetyModule.attachmentChipsReadonly('appoint', item)}
                         <div class="flex justify-between items-center pt-2 border-t border-slate-100 text-[10px] text-slate-500">
                             <span>상태: ${Utils.escapeHTML(item.status || '재직중')}</span>
                             <div class="flex gap-1">
@@ -6297,7 +6430,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                 if (!listEl) return;
                 const items = (State.safetyData.contractor || []).slice().sort((a, b) => (a.contractEnd || '9999').localeCompare(b.contractEnd || '9999'));
                 if (items.length === 0) {
-                    listEl.innerHTML = Utils.emptyStateCard('등록된 협력업체가 없습니다.');
+                    listEl.innerHTML = Utils.emptyStateCard('등록된 협력업체가 없습니다.', 'contractor');
                     return;
                 }
                 listEl.innerHTML = items.map(item => {
@@ -6407,7 +6540,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                 if (!listEl) return;
                 const items = State.safetyData.nearmiss || [];
                 if (items.length === 0) {
-                    listEl.innerHTML = Utils.emptyStateCard('등록된 아차사고 이력이 없습니다.');
+                    listEl.innerHTML = Utils.emptyStateCard('등록된 아차사고 이력이 없습니다.', 'nearmiss');
                     return;
                 }
                 const repeatMap = RepeatDetectionEngine.countMap(items, 'location', 'date');
@@ -6663,7 +6796,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                 if (!listEl) return;
                 const all = (State.safetyData.equipment || []).slice().sort((a, b) => (a.name || '').localeCompare(b.name || ''));
                 if (all.length === 0) {
-                    listEl.innerHTML = Utils.emptyStateCard('등록된 설비가 없습니다. "+ 설비 등록"으로 추가해주세요.');
+                    listEl.innerHTML = Utils.emptyStateCard('등록된 설비가 없습니다. "+ 설비 등록"으로 추가해주세요.', 'equipment');
                     return;
                 }
                 const statusStyle = { '사용중': 'bg-emerald-100 text-emerald-700', '사용중지': 'bg-amber-100 text-amber-700', '폐기': 'bg-slate-200 text-slate-500' };
@@ -6698,7 +6831,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                 if (!listEl) return;
                 const all = (State.safetyData.orgchart || []).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
                 if (all.length === 0) {
-                    listEl.innerHTML = Utils.emptyStateCard('등록된 구성원이 없습니다. "+ 구성원 등록"으로 추가해주세요.');
+                    listEl.innerHTML = Utils.emptyStateCard('등록된 구성원이 없습니다. "+ 구성원 등록"으로 추가해주세요.', 'orgchart');
                     return;
                 }
                 // 상하관계(parentId)를 트리로 펼쳐 보여줍니다. 순환참조(A→B→A)가 생겨도 무한루프에
@@ -6750,7 +6883,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                 if (listEl) {
                     const all = (State.safetyData.emergency || []).filter(i => i.active !== false).slice().sort((a, b) => (a.order || 0) - (b.order || 0));
                     if (all.length === 0) {
-                        listEl.innerHTML = Utils.emptyStateCard('등록된 비상연락처가 없습니다. "+ 연락처 등록"으로 추가해주세요.');
+                        listEl.innerHTML = Utils.emptyStateCard('등록된 비상연락처가 없습니다. "+ 연락처 등록"으로 추가해주세요.', 'emergency');
                     } else {
                         const groups = EMERGENCY_CATEGORIES.map(cat => ({ cat, items: all.filter(i => i.category === cat) })).filter(g => g.items.length > 0);
                         listEl.innerHTML = groups.map(g => `
@@ -6800,6 +6933,8 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                     titleEl.textContent = id ? '위험성평가 수정' : (this.riskDuplicateDraft ? '위험성평가 재등록 (기존 평가 복사됨)' : '위험성평가 등록');
                     this.riskPhotoDataBefore = (item && item.photoBefore) ? item.photoBefore : '';
                     this.riskPhotoDataAfter = (item && item.photoAfter) ? item.photoAfter : '';
+                    // v5.30: 위험성평가서 원본 서명지 등을 첨부할 수 있도록 공용 첨부파일 배열을 초기화합니다.
+                    this.attachmentsTemp = (item && Array.isArray(item.attachments)) ? item.attachments.slice() : [];
                     fieldsEl.innerHTML = `
                         <div class="space-y-1"><label class="font-bold text-slate-600">제목 (공정/작업명) *</label><input type="text" id="f-risk-title" value="${item ? Utils.escapeHTML(item.title || item.process) : ''}" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl"></div>
                         <div class="space-y-1"><label class="font-bold text-slate-600">위험요인 *</label><input type="text" id="f-risk-hazard" value="${item ? Utils.escapeHTML(item.hazard) : ''}" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl"></div>
@@ -6854,6 +6989,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                                 </div>
                             </div>
                         </div>
+                        ${this.attachmentFieldHtml(' — 서명된 위험성평가서 원본 등')}
                         <div class="space-y-1"><label class="font-bold text-slate-600">메모</label><input type="text" id="f-risk-memo" value="${item ? Utils.escapeHTML(item.memo || '') : ''}" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl"></div>
                     `;
                     this.updateRiskPreview();
@@ -7042,6 +7178,8 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                     `;
                 } else if (type === 'ptw') {
                     titleEl.textContent = id ? '작업허가(PTW) 수정' : '작업허가(PTW) 발급';
+                    // v5.30: 화기감시자·관리감독자 서명이 들어간 원본 작업허가서 서명지 등을 첨부할 수 있도록.
+                    this.attachmentsTemp = (item && Array.isArray(item.attachments)) ? item.attachments.slice() : [];
                     const gasText = (item && Array.isArray(item.gasChecks) && item.gasChecks.length)
                         ? item.gasChecks.map(g => [g.time, g.o2, g.gas, g.toxic, g.location, g.person, g.result].map(v => v || '').join(' | ')).join('\n') : '';
                     const workersText = (item && Array.isArray(item.workers) && item.workers.length)
@@ -7066,6 +7204,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                             <div class="space-y-1"><label class="font-bold text-slate-600">승인자</label><input type="text" id="f-ptw-approver" value="${item ? Utils.escapeHTML(item.approver || '') : ''}" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl"></div>
                             <div class="space-y-1"><label class="font-bold text-slate-600">메모</label><input type="text" id="f-ptw-memo" value="${item ? Utils.escapeHTML(item.memo || '') : ''}" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl"></div>
                         </div>
+                        ${this.attachmentFieldHtml(' — 서명된 작업허가서 원본 등')}
                         <details class="border border-slate-200 rounded-xl">
                             <summary class="cursor-pointer px-2.5 py-2 text-xs font-bold text-slate-600 select-none">📋 공식 작업허가서 상세정보 (선택 입력 — 입력할수록 엑셀출력 서식이 완전해집니다)</summary>
                             <div class="p-2.5 pt-0 space-y-2">
@@ -7200,6 +7339,8 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                     `;
                 } else if (type === 'appoint') {
                     titleEl.textContent = id ? '법정선임 정보 수정' : '법정선임 등록';
+                    // v5.30: 선임서·자격증(수첩) 사본을 첨부할 수 있도록.
+                    this.attachmentsTemp = (item && Array.isArray(item.attachments)) ? item.attachments.slice() : [];
                     fieldsEl.innerHTML = `
                         <div class="space-y-1"><label class="font-bold text-slate-600">직책 *</label><select id="f-appoint-role" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold">
                             ${['안전관리자','보건관리자','기계설비유지관리자','승강기관리자','에너지관리자','위험물안전관리자','전기안전관리자','소방안전관리자','기타'].map(r => `<option value="${r}" ${item && item.role === r ? 'selected' : ''}>${r}</option>`).join('')}
@@ -7213,6 +7354,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                             <div class="space-y-1"><label class="font-bold text-slate-600">자격/수첩번호</label><input type="text" id="f-appoint-cert" value="${item ? Utils.escapeHTML(item.certNumber || '') : ''}" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl"></div>
                             <div class="space-y-1"><label class="font-bold text-slate-600">상태</label><select id="f-appoint-status" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl font-bold"><option value="재직중" ${!item || item.status === '재직중' ? 'selected' : ''}>재직중</option><option value="교체예정" ${item && item.status === '교체예정' ? 'selected' : ''}>교체예정</option><option value="퇴사" ${item && item.status === '퇴사' ? 'selected' : ''}>퇴사</option></select></div>
                         </div>
+                        ${this.attachmentFieldHtml(' — 선임서, 자격증(수첩) 사본 등')}
                         <div class="space-y-1"><label class="font-bold text-slate-600">메모</label><input type="text" id="f-appoint-memo" value="${item ? Utils.escapeHTML(item.memo || '') : ''}" class="w-full text-xs p-2.5 bg-slate-50 border border-slate-200 rounded-xl"></div>
                     `;
                 } else if (type === 'ppe') {
@@ -7627,6 +7769,84 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                 if (wrap) wrap.classList.add('hidden');
             },
             // ============================================================
+            // 일반 첨부파일 (v5.30 신규) — 법정선임(선임서·자격증), 작업허가서(원본 서명지),
+            // 위험성평가에 "사진 외 문서(PDF)"도 첨부할 수 있게 만든 공용 UI/핸들러입니다.
+            // openModal()이 각 타입 분기에서 this.attachmentsTemp를 (기존 첨부 or [])로
+            // 채워두면, 여기 함수들이 그 배열을 편집하고, saveForm()이 최종적으로
+            // newItem.attachments에 반영합니다. 사진(개선전/후)과 달리 "여러 개, 임의 문서"를
+            // 다루므로 배열 하나로 통일했습니다.
+            // ============================================================
+            attachmentFieldHtml(labelExtra = '') {
+                return `
+                    <div class="space-y-1">
+                        <label class="font-bold text-slate-600">첨부파일 <span class="font-normal text-slate-400">(사진 또는 PDF, 파일당 4MB 이하${labelExtra})</span></label>
+                        <input type="file" accept="${Utils.ATTACHMENT_ACCEPT}" multiple onchange="SafetyModule.handleAttachmentSelect(event)" class="w-full text-xs p-1 bg-slate-50 border border-slate-200 rounded-xl">
+                        <div id="attachment-preview-list" class="space-y-1 mt-1">${this.renderAttachmentChips(this.attachmentsTemp || [])}</div>
+                    </div>
+                `;
+            },
+            renderAttachmentChips(list) {
+                if (!list || !list.length) return '';
+                return list.map((a, idx) => `
+                    <div class="flex items-center gap-1.5 bg-slate-50 border border-slate-200 rounded-lg px-2 py-1">
+                        <span class="text-xs flex-shrink-0">${a.type === 'application/pdf' ? '📄' : '🖼️'}</span>
+                        <button type="button" onclick="SafetyModule.viewAttachment(${idx})" class="flex-1 min-w-0 text-left text-[11px] text-slate-600 truncate hover:underline">${Utils.escapeHTML(a.name)}</button>
+                        <span class="text-[9px] text-slate-400 flex-shrink-0">${((a.size || 0) / 1024).toFixed(0)}KB</span>
+                        <button type="button" onclick="SafetyModule.removeAttachmentTemp(${idx})" class="w-5 h-5 flex-shrink-0 bg-rose-50 hover:bg-rose-100 text-rose-600 text-[11px] font-bold rounded-full flex items-center justify-center">✕</button>
+                    </div>
+                `).join('');
+            },
+            async handleAttachmentSelect(e) {
+                const files = e.target.files;
+                if (!files || !files.length) return;
+                if (!this.attachmentsTemp) this.attachmentsTemp = [];
+                const added = await Utils.readAttachmentFiles(files, (msg) => Toast.show(msg, 'error'));
+                this.attachmentsTemp = this.attachmentsTemp.concat(added);
+                const wrap = document.getElementById('attachment-preview-list');
+                if (wrap) wrap.innerHTML = this.renderAttachmentChips(this.attachmentsTemp);
+                e.target.value = '';
+                if (added.length) Toast.show(`첨부파일 ${added.length}건이 추가되었습니다.`, 'success');
+            },
+            removeAttachmentTemp(idx) {
+                if (!this.attachmentsTemp) return;
+                this.attachmentsTemp.splice(idx, 1);
+                const wrap = document.getElementById('attachment-preview-list');
+                if (wrap) wrap.innerHTML = this.renderAttachmentChips(this.attachmentsTemp);
+            },
+            // 모달에서 편집 중인 첨부파일 미리보기(팝업 새 창) — 이미지는 그대로, PDF는 iframe으로.
+            viewAttachment(idx) {
+                const a = this.attachmentsTemp && this.attachmentsTemp[idx];
+                if (!a) return;
+                this._openAttachmentWindow(a);
+            },
+            // 저장된 항목(카드 목록)에서 첨부파일을 볼 때 사용 — attachmentsTemp가 아니라
+            // State.safetyData에 저장된 실제 데이터를 직접 읽습니다.
+            viewItemAttachment(type, id, idx) {
+                const item = (State.safetyData[type] || []).find(i => i.id === id);
+                const a = item && item.attachments && item.attachments[idx];
+                if (!a) return;
+                this._openAttachmentWindow(a);
+            },
+            _openAttachmentWindow(a) {
+                const w = window.open('', '_blank');
+                if (!w) { Toast.show('팝업이 차단되었습니다. 팝업 허용 후 다시 시도해주세요.', 'error'); return; }
+                const safeName = Utils.escapeHTML(a.name || '첨부파일');
+                if (a.type === 'application/pdf') {
+                    w.document.write(`<title>${safeName}</title><body style="margin:0"><iframe src="${a.dataUrl}" style="width:100%;height:100vh;border:none;"></iframe></body>`);
+                } else {
+                    w.document.write(`<title>${safeName}</title><body style="margin:0;background:#111;display:flex;justify-content:center"><img src="${a.dataUrl}" style="max-width:100%;height:auto;"></body>`);
+                }
+            },
+            // 카드/목록 화면에 저장된 첨부파일 목록을 작은 칩 형태로 보여줍니다(읽기 전용).
+            attachmentChipsReadonly(type, item) {
+                const list = (item && item.attachments) || [];
+                if (!list.length) return '';
+                return `<div class="flex flex-wrap gap-1 mt-1">${list.map((a, idx) => `
+                    <button onclick="SafetyModule.viewItemAttachment('${type}','${item.id}',${idx})" class="flex items-center gap-1 bg-slate-100 hover:bg-slate-200 border border-slate-200 rounded-lg px-1.5 py-0.5 text-[10px] text-slate-600 max-w-[130px]" title="${Utils.escapeHTML(a.name)}">
+                        <span>${a.type === 'application/pdf' ? '📄' : '🖼️'}</span><span class="truncate">${Utils.escapeHTML(a.name)}</span>
+                    </button>`).join('')}</div>`;
+            },
+            // ============================================================
             // 단일 사진 첨부 공용 핸들러 (요청서 95번 "공통 유틸 활용")
             // 아차사고·안전교육처럼 사진 1장만 첨부하는 모듈이 공유합니다. stateKey는
             // this[stateKey]에 dataURL을 담아두는 임시 저장소 이름(예: 'nmPhotoData').
@@ -7805,6 +8025,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                     // (그 변수는 다른 if 분기 안에서만 선언됨), 여기서는 직접 조회합니다.
                     const existingRisk = id ? (State.safetyData.risk || []).find(r => r.id === id) : null;
                     newItem.previousAssessmentId = (existingRisk && existingRisk.previousAssessmentId) || (this.riskDuplicateDraft && this.riskDuplicateDraft.previousAssessmentId) || null;
+                    newItem.attachments = this.attachmentsTemp || [];
                     this.riskDuplicateDraft = null;
                 } else if (type === 'accident') {
                     newItem.date = document.getElementById('f-acc-date').value;
@@ -7907,6 +8128,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                     newItem.permitNote = document.getElementById('f-ptw-permitNote').value;
                     newItem.safetyNote = document.getElementById('f-ptw-safetyNote').value;
                     newItem.completeNote = document.getElementById('f-ptw-completeNote').value;
+                    newItem.attachments = this.attachmentsTemp || [];
                     // CAPA와 동일하게, 해당 상태에 처음 도달한 시각만 기록합니다(이미 있으면 덮어쓰지 않음).
                     newItem.approvedAt = (existingPtw && existingPtw.approvedAt) || null;
                     newItem.workStartedAt = (existingPtw && existingPtw.workStartedAt) || null;
@@ -7972,6 +8194,7 @@ API 키는 이 브라우저에만 저장되고 백업 파일에도 포함되지 
                     newItem.nextEduDate = document.getElementById('f-appoint-eduDate').value;
                     newItem.certNumber = document.getElementById('f-appoint-cert').value;
                     newItem.status = document.getElementById('f-appoint-status').value;
+                    newItem.attachments = this.attachmentsTemp || [];
                     newItem.memo = document.getElementById('f-appoint-memo').value;
                 } else if (type === 'ppe') {
                     newItem.itemType = document.getElementById('f-ppe-type').value;
@@ -8912,7 +9135,7 @@ ${continueFrom}
                     const buffer = await wb.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                     if (mode === 'share') {
-                        const result = await Utils.shareBlob(blob, `${label}_${todayStr}.xlsx`, blob.type);
+                        const result = await Utils.shareBlob(blob, `${label}_${todayStr}.xlsx`, blob.type, `${label} 엑셀 (${todayStr})`);
                         if (result === 'shared') Toast.show(`${label} 엑셀을 공유했습니다.`, 'success');
                     } else {
                         Utils.downloadBlob(blob, `${label}_${todayStr}.xlsx`);
@@ -9472,7 +9695,7 @@ ${continueFrom}
                     const buffer = await wb.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                     if (mode === 'share') {
-                        const result = await Utils.shareBlob(blob, `${filename}.xlsx`, blob.type);
+                        const result = await Utils.shareBlob(blob, `${filename}.xlsx`, blob.type, `${filename}.xlsx`);
                         if (result === 'shared') Toast.show(`${filename}.xlsx 공유를 완료했습니다.`, 'success');
                     } else {
                         Utils.downloadBlob(blob, `${filename}.xlsx`);
@@ -9667,7 +9890,7 @@ ${continueFrom}
                     const buffer = await wb.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                     if (mode === 'share') {
-                        const result = await Utils.shareBlob(blob, `${filename}.xlsx`, blob.type);
+                        const result = await Utils.shareBlob(blob, `${filename}.xlsx`, blob.type, `${filename}.xlsx`);
                         if (result === 'shared') Toast.show(`${filename}.xlsx 공유를 완료했습니다.`, 'success');
                     } else {
                         Utils.downloadBlob(blob, `${filename}.xlsx`);
@@ -9715,7 +9938,7 @@ ${continueFrom}
                         .replace(/[\\\/:?*\[\]"<>|]/g, ' ').trim().slice(0, 40) || label;
                     const filename = `${label}_${name}_${item.date || item.issueDate || item.appointDate || todayStr}.xlsx`;
                     if (mode === 'share') {
-                        const result = await Utils.shareBlob(blob, filename, blob.type);
+                        const result = await Utils.shareBlob(blob, filename, blob.type, filename);
                         if (result === 'shared') Toast.show('엑셀을 공유했습니다.', 'success');
                     } else {
                         Utils.downloadBlob(blob, filename);
@@ -11510,7 +11733,10 @@ ${continueFrom}
                     this.renderChecklist();
                 });
             },
-            async exportBackupJSON() {
+            // v5.30: "백업 다운로드 옆에도 공유하기 버튼이 있으면 좋겠다"는 요청으로, 엑셀
+            // 내보내기와 동일하게 다운로드(항상 보장)와 공유(별도 버튼)를 분리했습니다.
+            // mode==='share'면 공유 시트만 시도하고, 그 외(기본값)는 무조건 다운로드합니다.
+            async exportBackupJSON(mode) {
                 // v14: weeklyLogMeta·weeklyLogNotes가 기존에는 여기 빠져 있었습니다 — localStorage
                 // 자동저장(StorageEngine.save)에는 포함되지만 "백업 다운로드" 파일에는 없어서,
                 // 백업 복원 시 주간일지 작성자·부서 설정과 저장해둔 주간 메모가 사라지는 문제가
@@ -11531,18 +11757,27 @@ ${continueFrom}
                     safetyMenuOrder: State.safetyMenuOrder,
                     emergencyProcedureNote: State.emergencyProcedureNote
                 };
+                const filename = `safety_meerkat_backup_${todayStr}.json`;
                 const blob = new Blob([JSON.stringify(data, null, 2)], { type: 'application/json' });
-                const result = await Utils.deliverBlob(blob, `safety_meerkat_backup_${todayStr}.json`, 'application/json');
-                // 공유 시트를 열었다가 사용자가 취소한 경우("cancelled")는 실제로는 파일이 어디에도
-                // 저장되지 않았을 수 있으므로, 그 경우에는 "백업 완료" 시각을 갱신하지 않습니다
-                // (하지 않은 백업을 했다고 기록하지 않기 위함).
-                if (result === 'shared' || result === 'downloaded') {
+
+                if (mode === 'share') {
+                    const result = await Utils.shareBlob(blob, filename, 'application/json', filename);
+                    // shareBlob은 실패/미지원 시 이미 스스로 토스트를 띄우므로, 성공했을 때만
+                    // 여기서 "백업 완료" 시각을 갱신하고 안내합니다(하지 않은 백업을 했다고
+                    // 기록하지 않기 위함 — 취소/실패 시에는 시각을 건드리지 않습니다).
+                    if (result === 'shared') {
+                        localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString());
+                        this.renderLastBackupIndicator();
+                        this.renderBackupWarningBanner();
+                        Toast.show('백업 파일을 공유했습니다. (카카오톡 "나에게 보내기", 클라우드 등에 저장해두세요)', 'success');
+                    }
+                } else {
+                    Utils.downloadBlob(blob, filename);
                     localStorage.setItem(LAST_BACKUP_KEY, new Date().toISOString());
                     this.renderLastBackupIndicator();
                     this.renderBackupWarningBanner();
+                    Toast.show('백업 파일이 다운로드되었습니다.', 'success');
                 }
-                if (result === 'shared') Toast.show('백업 파일을 공유했습니다. (카카오톡 "나에게 보내기", 클라우드 등에 저장해두세요)', 'success');
-                else if (result === 'downloaded') Toast.show('백업 파일이 다운로드되었습니다.', 'success');
             },
             importBackupJSON(e) {
                 const file = e.target.files[0];
@@ -11595,12 +11830,19 @@ ${continueFrom}
                 };
                 reader.readAsText(file);
             },
-            async exportSingleHTML() {
+            // v5.30: 백업(JSON)과 동일하게 다운로드/공유를 분리했습니다.
+            async exportSingleHTML(mode) {
                 const htmlContent = document.documentElement.outerHTML;
+                const filename = `safety_meerkat_pro_standalone_${todayStr}.html`;
                 const blob = new Blob([htmlContent], { type: 'text/html;charset=utf-8;' });
-                const result = await Utils.deliverBlob(blob, `safety_meerkat_pro_standalone_${todayStr}.html`, 'text/html');
-                if (result === 'shared') Toast.show('단일 HTML 파일을 공유했습니다.', 'success');
-                else if (result === 'downloaded') Toast.show('단일 HTML 파일이 다운로드되었습니다.', 'success');
+
+                if (mode === 'share') {
+                    const result = await Utils.shareBlob(blob, filename, 'text/html', filename);
+                    if (result === 'shared') Toast.show('단일 HTML 파일을 공유했습니다.', 'success');
+                } else {
+                    Utils.downloadBlob(blob, filename);
+                    Toast.show('단일 HTML 파일이 다운로드되었습니다.', 'success');
+                }
             },
             // printReport()와 shareReport()가 똑같이 필요로 하는 "오늘 하루 요약" 데이터를
             // 한 곳에서만 만듭니다 (중복 로직을 두 벌 유지하면 한쪽만 고쳐져서 내용이 어긋납니다).
@@ -11930,7 +12172,7 @@ ${continueFrom}
                     const buffer = await wb.xlsx.writeBuffer();
                     const blob = new Blob([buffer], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' });
                     if (mode === 'share') {
-                        const result = await Utils.shareBlob(blob, `${label}_${todayStr}.xlsx`, blob.type);
+                        const result = await Utils.shareBlob(blob, `${label}_${todayStr}.xlsx`, blob.type, `${label} 엑셀 (${todayStr})`);
                         if (result === 'shared') Toast.show(`${label} 엑셀을 공유했습니다.`, 'success');
                     } else {
                         Utils.downloadBlob(blob, `${label}_${todayStr}.xlsx`);
@@ -12160,7 +12402,7 @@ ${continueFrom}
                 Actions.init();
 
                 // v5.8: PWA 확장모듈 초기화 (PWA 확장모듈에서 이식)
-                VoiceInput.attach('report-desc', { showLangSelect: false }); // 위험신고는 언어선택 없이 한국어로 고정 (요청에 따라 단순화) - 모달형 필드는 openModal()에서 매번 부착
+                VoiceInput.attach('report-desc'); // v5.30: 언어선택 기본값이 없음(한국어 고정)으로 바뀌어 옵션 불필요 - 모달형 필드는 openModal()에서 매번 부착
                 PWAInstall.init();
                 PWAInstall.registerServiceWorker();
                 checkSecureContext();

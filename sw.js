@@ -9,7 +9,7 @@
    버전을 바꾸지 않으면 사용자 기기에 예전 버전이 계속 캐시된 채로
    남아 "업데이트했는데 옛날 화면이 보이는" 문제가 발생합니다.
    ============================================================ */
-const CACHE_VERSION = 'safe-ducky-shell-v20.0.0';
+const CACHE_VERSION = 'safe-ducky-shell-v21.0.0';
 
 const CORE_ASSETS = [
   './',
@@ -30,6 +30,14 @@ const CORE_ASSETS = [
   './assets/safeducky/empty-permit.jpg',
   './assets/safeducky/empty-history.jpg',
   './assets/safeducky/empty-generic.jpg',
+  './assets/safeducky/empty-accident.jpg',
+  './assets/safeducky/empty-tbm.jpg',
+  './assets/safeducky/empty-appoint.jpg',
+  './assets/safeducky/empty-contractor.jpg',
+  './assets/safeducky/empty-nearmiss.jpg',
+  './assets/safeducky/empty-equipment.jpg',
+  './assets/safeducky/empty-orgchart.jpg',
+  './assets/safeducky/empty-emergency.jpg',
   'https://cdn.tailwindcss.com',
   'https://cdn.sheetjs.com/xlsx-0.20.3/package/dist/xlsx.full.min.js',
   'https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js',
